@@ -35,27 +35,34 @@ def get_forms(api_key):
     
     return []
 
-# Function to retrieve the number of submissions for a form
+# Updated Function to retrieve the number of submissions for a form
 def get_submission_count(form_id, api_key):
     url = f"{BASE_URL}/form/{form_id}/submissions"
     params = {
         'apiKey': api_key,
-        'limit': 0  # Assuming the API returns the total count without fetching submissions
+        'limit': 1  # Minimal data to reduce payload
     }
     response = requests.get(url, params=params)
     
     try:
         response.raise_for_status()
+        
+        # Attempt to retrieve the total count from headers
+        total = response.headers.get('X-Total-Count')
+        if total:
+            return int(total)
+        
+        # If header not available, fetch all submissions and count
+        params['limit'] = 1000  # Adjust as needed
+        response = requests.get(url, params=params)
+        response.raise_for_status()
         data = response.json()
-
-        if 'total' in data:
-            return data['total']
-        elif 'content' in data:
+        
+        if 'content' in data:
             return len(data['content'])
         else:
             print(f"Unexpected response structure when fetching submissions: {data}")
             return 0
-    
     except requests.exceptions.HTTPError as http_err:
         print(f"HTTP error occurred while fetching submissions for form {form_id}: {http_err}")
     except Exception as err:
