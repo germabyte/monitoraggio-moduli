@@ -2,6 +2,7 @@ import requests
 import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
+from datetime import datetime
 
 # Replace with your actual API key
 API_KEY = '48793d9fd9e19f3bb29a29a59e7bce95'
@@ -35,7 +36,7 @@ def get_forms(api_key):
     
     return []
 
-# Updated Function to retrieve the number of submissions for a form
+# Function to retrieve the number of submissions for a form
 def get_submission_count(form_id, api_key):
     url = f"{BASE_URL}/form/{form_id}/submissions"
     params = {
@@ -69,6 +70,46 @@ def get_submission_count(form_id, api_key):
         print(f"An error occurred while fetching submissions for form {form_id}: {err}")
     
     return 0
+
+# Function to retrieve the date of the last submission for a form
+def get_last_submission_date(form_id, api_key):
+    url = f"{BASE_URL}/form/{form_id}/submissions"
+    params = {
+        'apiKey': api_key,
+        'limit': 1,
+        'orderby': 'created_at',  # Assuming the API supports ordering
+        'sort': 'desc'            # Get the latest submission first
+    }
+    response = requests.get(url, params=params)
+    
+    try:
+        response.raise_for_status()
+        data = response.json()
+
+        if 'content' in data and len(data['content']) > 0:
+            last_submission = data['content'][0]
+            created_at = last_submission.get('created_at')
+            if created_at:
+                # Try multiple date formats
+                for fmt in ("%Y-%m-%dT%H:%M:%S%z", "%Y-%m-%d %H:%M:%S"):
+                    try:
+                        dt = datetime.strptime(created_at, fmt)
+                        return dt.strftime("%Y-%m-%d %H:%M:%S")
+                    except ValueError:
+                        continue
+                # If none match, return the original string
+                return created_at
+            else:
+                return "N/A"
+        else:
+            return "N/A"
+    
+    except requests.exceptions.HTTPError as http_err:
+        print(f"HTTP error occurred while fetching last submission for form {form_id}: {http_err}")
+    except Exception as err:
+        print(f"An error occurred while fetching last submission for form {form_id}: {err}")
+    
+    return "N/A"
 
 # Function to retrieve all submissions for the form
 def get_submissions(form_id, api_key):
@@ -136,8 +177,9 @@ def retrieve_forms():
             form_id = form.get('id', 'N/A')
             log_message(f"Fetching submission count for form {index}/{len(forms)}: {form_title} (ID: {form_id})")
             submission_count = get_submission_count(form_id, API_KEY)
-            form_tree.insert("", "end", iid=form_id, values=(form_title, form_id, submission_count))
-        log_message(f"Retrieved {len(forms)} forms with their submission counts.")
+            last_submission_date = get_last_submission_date(form_id, API_KEY)
+            form_tree.insert("", "end", iid=form_id, values=(form_title, form_id, submission_count, last_submission_date))
+        log_message(f"Retrieved {len(forms)} forms with their submission counts and last submission dates.")
     else:
         messagebox.showerror("Error", "Could not retrieve forms. Please check your API key or connection.")
         log_message("Failed to retrieve forms.")
@@ -153,16 +195,23 @@ def delete_selected_forms():
         form_title = form_values[0]
         log_message(f"Deleting submissions for form: {form_title} (ID: {form_id})")
         delete_all_submissions(form_id, API_KEY)
-        # Optionally, update the submission count to 0 after deletion
+        # Optionally, update the submission count and last submission date after deletion
         form_tree.set(form_id, column="Submissions", value=0)
+        form_tree.set(form_id, column="Last Submission", value="N/A")
     
     messagebox.showinfo("Complete", "Submission deletion process completed.")
     log_message("Deletion process completed.")
 
+# Function to automatically retrieve forms every 60 seconds
+def auto_retrieve_forms():
+    retrieve_forms()
+    # Schedule the next retrieval after 60000 milliseconds (60 seconds)
+    root.after(60000, auto_retrieve_forms)
+
 # Main GUI Application
 root = tk.Tk()
 root.title("JotForm Submission Deleter")
-root.geometry("700x500")
+root.geometry("900x500")  # Increased width to accommodate the new column
 
 # Create a style object to use a modern look if possible
 style = ttk.Style()
@@ -178,11 +227,18 @@ instruction_label.pack(side=tk.LEFT)
 form_frame = ttk.Frame(root, padding="10")
 form_frame.pack(fill=tk.BOTH, expand=True)
 
-columns = ("Title", "ID", "Submissions")
+columns = ("Title", "ID", "Submissions", "Last Submission")
 form_tree = ttk.Treeview(form_frame, columns=columns, show="headings", selectmode="extended")
 for col in columns:
     form_tree.heading(col, text=col)
-    form_tree.column(col, anchor="w", width=200 if col == "Title" else 150)
+    if col == "Title":
+        form_tree.column(col, anchor="w", width=300)
+    elif col == "ID":
+        form_tree.column(col, anchor="w", width=150)
+    elif col == "Submissions":
+        form_tree.column(col, anchor="center", width=100)
+    elif col == "Last Submission":
+        form_tree.column(col, anchor="center", width=200)
 
 form_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
@@ -209,6 +265,9 @@ log_label.pack(anchor="w")
 
 log_box = tk.Text(log_frame, height=10, state=tk.NORMAL, wrap="word")
 log_box.pack(fill=tk.BOTH, expand=True)
+
+# Start the auto retrieval process
+auto_retrieve_forms()
 
 # Start the GUI application
 root.mainloop()
