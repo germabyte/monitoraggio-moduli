@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JotForm Submission Manager</title>
+    <title>Gestore Invii JotForm</title>
     <!-- Bootstrap CSS for styling -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
@@ -38,20 +38,20 @@
 </head>
 <body>
     <div class="container">
-        <h1 class="mb-4">JotForm Submission Manager</h1>
+        <h1 class="mb-4">Gestore Invii JotForm</h1>
         
         <!-- API Key Input -->
         <div id="mainApp">
             <div class="mb-3">
-                <label for="apiKey" class="form-label">JotForm API Key:</label>
-                <input type="password" class="form-control" id="apiKey" placeholder="Enter your JotForm API Key">
-                <div class="form-text">Your API key is used to access your JotForm forms and submissions.</div>
+                <label for="apiKey" class="form-label">Chiave API JotForm:</label>
+                <input type="password" class="form-control" id="apiKey" placeholder="Inserisci la tua Chiave API JotForm">
+                <div class="form-text">La tua chiave API viene utilizzata per accedere ai tuoi moduli e invii JotForm.</div>
             </div>
             
             <!-- Buttons -->
             <div class="mb-3">
-                <button class="btn btn-primary me-2" id="retrieveFormsBtn">Retrieve Forms</button>
-                <button class="btn btn-danger" id="deleteSubmissionsBtn">Delete Selected Submissions</button>
+                <button class="btn btn-primary me-2" id="retrieveFormsBtn">Recupera Moduli</button>
+                <button class="btn btn-danger" id="deleteSubmissionsBtn">Elimina Invii Selezionati</button>
             </div>
             
             <!-- Forms Table -->
@@ -59,12 +59,12 @@
                 <table class="table table-striped" id="formsTable">
                     <thead>
                         <tr>
-                            <th data-column="select">Select</th>
-                            <th data-column="title">Title</th>
+                            <th data-column="select">Seleziona</th>
+                            <th data-column="title">Titolo</th>
                             <th data-column="id">ID</th>
-                            <th data-column="status">Status</th>
-                            <th data-column="submissions">Submissions</th>
-                            <th data-column="lastSubmission">Last Submission</th>
+                            <th data-column="status">Stato</th>
+                            <th data-column="submissions">Invii</th>
+                            <th data-column="lastSubmission">Ultimo Invio</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -75,7 +75,7 @@
             
             <!-- Log Box -->
             <div class="mt-4">
-                <h5>Log:</h5>
+                <h5>Registro:</h5>
                 <div id="logBox"></div>
             </div>
         </div>
@@ -86,18 +86,18 @@
       <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="authModalLabel">Authentication Required</h5>
+            <h5 class="modal-title" id="authModalLabel">Autenticazione Necessaria</h5>
           </div>
           <div class="modal-body">
             <form id="authForm">
                 <div class="mb-3">
-                    <label for="userEmail" class="form-label">Enter Your Email:</label>
-                    <input type="email" class="form-control" id="userEmail" placeholder="name@example.com" required>
+                    <label for="userEmail" class="form-label">Inserisci la tua Email:</label>
+                    <input type="email" class="form-control" id="userEmail" placeholder="nome@esempio.com" required>
                 </div>
                 <div id="authError" class="text-danger mb-3" style="display: none;">
-                    Unauthorized email address.
+                    Indirizzo email non autorizzato.
                 </div>
-                <button type="submit" class="btn btn-primary">Submit</button>
+                <button type="submit" class="btn btn-primary">Invia</button>
             </form>
           </div>
         </div>
@@ -142,20 +142,20 @@
         async function retrieveForms() {
             const apiKey = document.getElementById('apiKey').value.trim();
             if (!apiKey) {
-                alert('Please enter your JotForm API Key.');
+                alert('Per favore inserisci la tua Chiave API JotForm.');
                 return;
             }
 
-            logMessage('Retrieving forms...');
+            logMessage('Recupero dei moduli...');
             try {
                 const response = await fetch(`${BASE_URL}/user/forms?apiKey=${apiKey}`);
                 if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
+                    throw new Error(`Errore HTTP! Stato: ${response.status}`);
                 }
                 const data = await response.json();
 
                 if (!data.content) {
-                    logMessage('Unexpected response structure while retrieving forms.');
+                    logMessage('Struttura di risposta inaspettata durante il recupero dei moduli.');
                     return;
                 }
 
@@ -164,12 +164,12 @@
                 tbody.innerHTML = ''; // Clear existing rows
 
                 for (let [index, form] of forms.entries()) {
-                    const formTitle = form.title || 'No Title';
+                    const formTitle = form.title || 'Senza Titolo';
                     const formId = form.id || 'N/A';
-                    const formStatus = form.status || 'ENABLED';
-                    const isActive = formStatus.toUpperCase() === 'ENABLED';
+                    const formStatus = form.status || 'ATTIVATO';
+                    const isActive = formStatus.toUpperCase() === 'ATTIVATO';
 
-                    logMessage(`Fetching submission count for form ${index + 1}/${forms.length}: '${formTitle}' (ID: ${formId})`);
+                    logMessage(`Recupero del conteggio degli invii per il modulo ${index + 1}/${forms.length}: '${formTitle}' (ID: ${formId})`);
                     const submissionCount = await getSubmissionCount(formId, apiKey);
                     const lastSubmissionDate = await getLastSubmissionDate(formId, apiKey);
 
@@ -190,9 +190,9 @@
                     tbody.appendChild(row);
                 }
 
-                logMessage(`Retrieved ${forms.length} forms.`);
+                logMessage(`Recuperati ${forms.length} moduli.`);
             } catch (error) {
-                logMessage(`Error retrieving forms: ${error.message}`);
+                logMessage(`Errore nel recupero dei moduli: ${error.message}`);
                 console.error(error);
             }
         }
@@ -201,7 +201,7 @@
         async function getSubmissionCount(formId, apiKey) {
             try {
                 const response = await fetch(`${BASE_URL}/form/${formId}/submissions?apiKey=${apiKey}&limit=1`);
-                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                if (!response.ok) throw new Error(`Errore HTTP! Stato: ${response.status}`);
                 const total = response.headers.get('X-Total-Count');
                 if (total) return parseInt(total);
                 
@@ -209,7 +209,7 @@
                 const data = await response.json();
                 return data.content ? data.content.length : 0;
             } catch (error) {
-                logMessage(`Error fetching submission count for form ${formId}: ${error.message}`);
+                logMessage(`Errore nel recuperare il conteggio degli invii per il modulo ${formId}: ${error.message}`);
                 return 0;
             }
         }
@@ -218,7 +218,7 @@
         async function getLastSubmissionDate(formId, apiKey) {
             try {
                 const response = await fetch(`${BASE_URL}/form/${formId}/submissions?apiKey=${apiKey}&limit=1&orderby=created_at&sort=desc`);
-                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                if (!response.ok) throw new Error(`Errore HTTP! Stato: ${response.status}`);
                 const data = await response.json();
 
                 if (data.content && data.content.length > 0) {
@@ -229,7 +229,7 @@
                     return 'N/A';
                 }
             } catch (error) {
-                logMessage(`Error fetching last submission date for form ${formId}: ${error.message}`);
+                logMessage(`Errore nel recuperare la data dell'ultimo invio per il modulo ${formId}: ${error.message}`);
                 return 'N/A';
             }
         }
@@ -238,24 +238,24 @@
         async function deleteSelectedSubmissions() {
             const apiKey = document.getElementById('apiKey').value.trim();
             if (!apiKey) {
-                alert('Please enter your JotForm API Key.');
+                alert('Per favore inserisci la tua Chiave API JotForm.');
                 return;
             }
 
             const checkboxes = document.querySelectorAll('.form-select-checkbox:checked');
             if (checkboxes.length === 0) {
-                alert('Please select at least one active form to delete submissions.');
+                alert('Per favore seleziona almeno un modulo attivo per eliminare gli invii.');
                 return;
             }
 
-            if (!confirm(`Are you sure you want to delete submissions for ${checkboxes.length} form(s)? This action cannot be undone.`)) {
+            if (!confirm(`Sei sicuro di voler eliminare gli invii per ${checkboxes.length} modulo/i? Questa azione non può essere annullata.`)) {
                 return;
             }
 
             for (let checkbox of checkboxes) {
                 const formId = checkbox.getAttribute('data-form-id');
                 const formTitle = checkbox.closest('tr').children[1].innerText;
-                logMessage(`Deleting submissions for form: ${formTitle} (ID: ${formId})`);
+                logMessage(`Eliminazione degli invii per il modulo: ${formTitle} (ID: ${formId})`);
                 await deleteAllSubmissions(formId, apiKey);
                 // Update the table row
                 const row = checkbox.closest('tr');
@@ -264,8 +264,8 @@
                 checkbox.checked = false;
             }
 
-            alert('Deletion process completed. Check the log for details.');
-            logMessage('Deletion process completed.');
+            alert('Processo di eliminazione completato. Controlla il registro per i dettagli.');
+            logMessage('Processo di eliminazione completato.');
         }
 
         // Function to delete all submissions for a form
@@ -277,7 +277,7 @@
 
                 while (hasMore) {
                     const response = await fetch(`${BASE_URL}/form/${formId}/submissions?apiKey=${apiKey}&limit=${limit}&page=${page}`);
-                    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                    if (!response.ok) throw new Error(`Errore HTTP! Stato: ${response.status}`);
                     const data = await response.json();
 
                     if (data.content && data.content.length > 0) {
@@ -287,9 +287,9 @@
                                 method: 'DELETE'
                             });
                             if (deleteResponse.ok) {
-                                logMessage(`Deleted submission ID: ${submissionId}`);
+                                logMessage(`Eliminato invio ID: ${submissionId}`);
                             } else {
-                                logMessage(`Failed to delete submission ID: ${submissionId}. Status: ${deleteResponse.status}`);
+                                logMessage(`Impossibile eliminare l'invio ID: ${submissionId}. Stato: ${deleteResponse.status}`);
                             }
                         }
                         // Check if there are more submissions
@@ -300,9 +300,9 @@
                     }
                 }
 
-                logMessage(`All submissions for form ID ${formId} have been deleted.`);
+                logMessage(`Tutti gli invii per il modulo ID ${formId} sono stati eliminati.`);
             } catch (error) {
-                logMessage(`Error deleting submissions for form ID ${formId}: ${error.message}`);
+                logMessage(`Errore nell'eliminare gli invii per il modulo ID ${formId}: ${error.message}`);
                 console.error(error);
             }
         }
@@ -359,7 +359,7 @@
             authError.style.display = 'none'; // Hide previous error
 
             if (!userEmail) {
-                authError.textContent = 'Please enter a valid email address.';
+                authError.textContent = 'Per favore inserisci un indirizzo email valido.';
                 authError.style.display = 'block';
                 return;
             }
@@ -368,7 +368,7 @@
                 // Fetch the whitelist.txt file
                 const response = await fetch('whitelist.txt');
                 if (!response.ok) {
-                    throw new Error(`Failed to fetch whitelist. Status: ${response.status}`);
+                    throw new Error(`Impossibile recuperare la whitelist. Stato: ${response.status}`);
                 }
 
                 const whitelistData = await response.text();
@@ -380,17 +380,17 @@
                     // Hide the modal and show the main application
                     authModalInstance.hide();
                     document.getElementById('mainApp').style.display = 'block';
-                    logMessage(`User '${userEmail}' authenticated successfully.`);
+                    logMessage(`Utente '${userEmail}' autenticato con successo.`);
                 } else {
                     // Show error message
-                    authError.textContent = 'Unauthorized email address.';
+                    authError.textContent = 'Indirizzo email non autorizzato.';
                     authError.style.display = 'block';
-                    logMessage(`Unauthorized access attempt by '${userEmail}'.`);
+                    logMessage(`Tentativo di accesso non autorizzato da parte di '${userEmail}'.`);
                 }
             } catch (error) {
-                authError.textContent = `Error during authentication: ${error.message}`;
+                authError.textContent = `Errore durante l'autenticazione: ${error.message}`;
                 authError.style.display = 'block';
-                logMessage(`Error during authentication: ${error.message}`);
+                logMessage(`Errore durante l'autenticazione: ${error.message}`);
                 console.error(error);
             }
         });
