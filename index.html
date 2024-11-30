@@ -81,7 +81,7 @@
         </div>
     </div>
 
-    <!-- Email Authentication Modal -->
+    <!-- Password Authentication Modal -->
     <div class="modal fade" id="authModal" tabindex="-1" aria-labelledby="authModalLabel" aria-hidden="true">
       <div class="modal-dialog">
         <div class="modal-content">
@@ -91,11 +91,11 @@
           <div class="modal-body">
             <form id="authForm">
                 <div class="mb-3">
-                    <label for="userEmail" class="form-label">Inserisci la tua Email:</label>
-                    <input type="email" class="form-control" id="userEmail" placeholder="nome@esempio.com" required>
+                    <label for="userPassword" class="form-label">Inserisci la tua Password:</label>
+                    <input type="password" class="form-control" id="userPassword" placeholder="Password" required>
                 </div>
                 <div id="authError" class="text-danger mb-3" style="display: none;">
-                    Indirizzo email non autorizzato.
+                    Password non autorizzata.
                 </div>
                 <button type="submit" class="btn btn-primary">Invia</button>
             </form>
@@ -350,16 +350,16 @@
             return columns.indexOf(column) + 1;
         }
 
-        // Email Authentication Logic
+        // Password Authentication Logic
         document.getElementById('authForm').addEventListener('submit', async function(event) {
             event.preventDefault(); // Prevent form submission
 
-            const userEmail = document.getElementById('userEmail').value.trim().toLowerCase();
+            const userPassword = document.getElementById('userPassword').value.trim();
             const authError = document.getElementById('authError');
             authError.style.display = 'none'; // Hide previous error
 
-            if (!userEmail) {
-                authError.textContent = 'Per favore inserisci un indirizzo email valido.';
+            if (!userPassword) {
+                authError.textContent = 'Per favore inserisci una password valida.';
                 authError.style.display = 'block';
                 return;
             }
@@ -372,20 +372,35 @@
                 }
 
                 const whitelistData = await response.text();
-                const encodedEmails = whitelistData.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-                const allowedEmails = encodedEmails.map(encoded => atob(encoded.toString())).map(email => email.toLowerCase());
+                const lines = whitelistData.split('\n').map(line => line.trim()).filter(line => line.length > 0);
 
-                // Check if the entered email is in the allowed list
-                if (allowedEmails.includes(userEmail)) {
-                    // Hide the modal and show the main application
+                const userEntries = lines.map(line => {
+                    const [encodedPassword, encodedApiKey] = line.split(',');
+                    const password = atob(encodedPassword);
+                    const apiKey = atob(encodedApiKey);
+                    return { password, apiKey };
+                });
+
+                const userEntry = userEntries.find(entry => entry.password === userPassword);
+
+                if (userEntry) {
+                    // Authentication successful
                     authModalInstance.hide();
                     document.getElementById('mainApp').style.display = 'block';
-                    logMessage(`Utente '${userEmail}' autenticato con successo.`);
+                    logMessage(`Utente autenticato con successo.`);
+
+                    const loadDefaultApiKey = confirm("Vuoi caricare la API key salvata in memoria per la tua utenza?");
+                    if (loadDefaultApiKey) {
+                        document.getElementById('apiKey').value = userEntry.apiKey;
+                        logMessage('API key predefinita caricata.');
+                    } else {
+                        logMessage('Inserisci la tua API key personalizzata.');
+                    }
                 } else {
                     // Show error message
-                    authError.textContent = 'Indirizzo email non autorizzato.';
+                    authError.textContent = 'Password non autorizzata.';
                     authError.style.display = 'block';
-                    logMessage(`Tentativo di accesso non autorizzato da parte di '${userEmail}'.`);
+                    logMessage(`Tentativo di accesso non autorizzato.`);
                 }
             } catch (error) {
                 authError.textContent = `Errore durante l'autenticazione: ${error.message}`;
