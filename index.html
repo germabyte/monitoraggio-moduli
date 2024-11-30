@@ -54,6 +54,15 @@
                 <button class="btn btn-danger" id="deleteSubmissionsBtn">Elimina Invii Selezionati</button>
             </div>
             
+            <!-- Progress Bar -->
+            <div class="mb-3">
+                <label for="refreshProgress" class="form-label">Prossimo aggiornamento tra:</label>
+                <div class="progress">
+                    <div id="refreshProgressBar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuemin="0" aria-valuemax="60"></div>
+                </div>
+                <small id="refreshCountdown" class="form-text text-muted">60 secondi</small>
+            </div>
+            
             <!-- Forms Table -->
             <div class="table-responsive">
                 <table class="table table-striped" id="formsTable">
@@ -118,8 +127,15 @@
         // Global variable for the authentication modal instance
         let authModalInstance;
 
+        // Progress Bar Variables
+        const refreshInterval = 60; // seconds
+        let timeLeft = refreshInterval;
+        let progressBarTimer;
+
         // Event Listeners
-        document.getElementById('retrieveFormsBtn').addEventListener('click', retrieveForms);
+        document.getElementById('retrieveFormsBtn').addEventListener('click', () => {
+            retrieveForms();
+        });
         document.getElementById('deleteSubmissionsBtn').addEventListener('click', deleteSelectedSubmissions);
         document.querySelectorAll('#formsTable th').forEach(header => {
             header.addEventListener('click', () => {
@@ -199,6 +215,8 @@
             } catch (error) {
                 logMessage(`Errore nel recupero dei moduli: ${error.message}`);
                 console.error(error);
+            } finally {
+                resetProgressBarTimer();
             }
         }
 
@@ -438,7 +456,7 @@
                         logMessage('Inserisci la tua API key personalizzata.');
                     }
 
-                    // Optionally, retrieve forms immediately after authentication
+                    // Retrieve forms after authentication
                     retrieveForms();
                 } else {
                     // Show error message
@@ -463,13 +481,106 @@
             authModalInstance.show();
         });
 
-        // Optional: Auto-retrieve forms every 60 seconds
-        setInterval(() => {
+        // Progress Bar Functions
+
+        // Function to update the progress bar
+        function updateProgressBar() {
+            const progressBar = document.getElementById('refreshProgressBar');
+            const countdown = document.getElementById('refreshCountdown');
+            const percent = ((refreshInterval - timeLeft) / refreshInterval) * 100;
+            progressBar.style.width = percent + '%';
+            progressBar.setAttribute('aria-valuenow', refreshInterval - timeLeft);
+            countdown.innerText = `${timeLeft} secondi`;
+        }
+
+        // Function to start the progress bar timer
+        function startProgressBarTimer() {
+            timeLeft = refreshInterval;
+            updateProgressBar();
+            clearInterval(progressBarTimer);
+            progressBarTimer = setInterval(() => {
+                timeLeft--;
+                if (timeLeft <= 0) {
+                    retrieveForms();
+                    timeLeft = refreshInterval;
+                }
+                updateProgressBar();
+            }, 1000);
+        }
+
+        // Function to reset the progress bar timer
+        function resetProgressBarTimer() {
+            timeLeft = refreshInterval;
+            updateProgressBar();
+            clearInterval(progressBarTimer);
+            startProgressBarTimer();
+        }
+
+        // Initialize the progress bar timer after retrieving forms
+        async function retrieveForms() {
             const apiKey = document.getElementById('apiKey').value.trim();
-            if (apiKey) {
-                retrieveForms();
+            if (!apiKey) {
+                alert('Per favore inserisci la tua Chiave API JotForm.');
+                return;
             }
-        }, 60000); // 60000 milliseconds = 60 seconds
+
+            logMessage('Recupero dei moduli...');
+            try {
+                const response = await fetch(`${BASE_URL}/user/forms?apiKey=${apiKey}`);
+                if (!response.ok) {
+                    throw new Error(`Errore HTTP! Stato: ${response.status}`);
+                }
+                const data = await response.json();
+
+                if (!data.content) {
+                    logMessage('Struttura di risposta inaspettata durante il recupero dei moduli.');
+                    return;
+                }
+
+                const forms = data.content;
+                const tbody = document.querySelector('#formsTable tbody');
+                tbody.innerHTML = ''; // Clear existing rows
+
+                for (let [index, form] of forms.entries()) {
+                    const formTitle = form.title || 'Senza Titolo';
+                    const formId = form.id || 'N/A';
+                    const formStatus = form.status || 'ATTIVATO';
+                    const isActive = formStatus.toUpperCase() === 'ATTIVATO';
+
+                    logMessage(`Recupero del conteggio degli invii per il modulo ${index + 1}/${forms.length}: '${formTitle}' (ID: ${formId})`);
+                    const submissionCount = await getSubmissionCount(formId, apiKey);
+                    const lastSubmissionDate = await getLastSubmissionDate(formId, apiKey);
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="text-center">
+                            <input type="checkbox" class="form-select-checkbox" data-form-id="${formId}" ${isActive ? '' : 'disabled'}>
+                        </td>
+                        <td>${formTitle}</td>
+                        <td>${formId}</td>
+                        <td>${formStatus}</td>
+                        <td>${submissionCount}</td>
+                        <td>${lastSubmissionDate}</td>
+                    `;
+                    if (!isActive) {
+                        row.classList.add('table-secondary');
+                    }
+                    tbody.appendChild(row);
+                }
+
+                logMessage(`Recuperati ${forms.length} moduli.`);
+
+                // Apply the current sort after refreshing the table
+                if (currentSortColumn) {
+                    applyCurrentSort();
+                }
+            } catch (error) {
+                logMessage(`Errore nel recupero dei moduli: ${error.message}`);
+                console.error(error);
+            } finally {
+                resetProgressBarTimer();
+            }
+        }
     </script>
 </body>
 </html>
