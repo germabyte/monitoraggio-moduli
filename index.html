@@ -191,6 +191,11 @@
                 }
 
                 logMessage(`Recuperati ${forms.length} moduli.`);
+
+                // Apply the current sort after refreshing the table
+                if (currentSortColumn) {
+                    applyCurrentSort();
+                }
             } catch (error) {
                 logMessage(`Errore nel recupero dei moduli: ${error.message}`);
                 console.error(error);
@@ -309,15 +314,19 @@
 
         // Function to sort the table based on a column
         function sortTable(column) {
+            if (!column) return;
+
+            if (currentSortColumn === column) {
+                // Toggle sort order if the same column is clicked
+                currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+            } else {
+                // Set to ascending order if a new column is clicked
+                currentSortOrder = 'asc';
+                currentSortColumn = column;
+            }
+
             const tbody = document.querySelector('#formsTable tbody');
             const rows = Array.from(tbody.querySelectorAll('tr'));
-
-            if (!currentSortColumn || currentSortColumn !== column) {
-                currentSortOrder = 'asc';
-            } else {
-                currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
-            }
-            currentSortColumn = column;
 
             rows.sort((a, b) => {
                 let aText = a.querySelector(`td:nth-child(${getColumnIndex(column)})`).innerText.trim();
@@ -348,6 +357,38 @@
         function getColumnIndex(column) {
             const columns = ['select', 'title', 'id', 'status', 'submissions', 'lastSubmission'];
             return columns.indexOf(column) + 1;
+        }
+
+        // New Function: Apply the current sort after refreshing the table
+        function applyCurrentSort() {
+            if (!currentSortColumn) return; // No sort to apply
+
+            const tbody = document.querySelector('#formsTable tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+
+            rows.sort((a, b) => {
+                let aText = a.querySelector(`td:nth-child(${getColumnIndex(currentSortColumn)})`).innerText.trim();
+                let bText = b.querySelector(`td:nth-child(${getColumnIndex(currentSortColumn)})`).innerText.trim();
+
+                // Handle numeric and date sorting
+                if (currentSortColumn === 'submissions') {
+                    aText = parseInt(aText) || 0;
+                    bText = parseInt(bText) || 0;
+                } else if (currentSortColumn === 'lastSubmission') {
+                    aText = new Date(aText).getTime() || 0;
+                    bText = new Date(bText).getTime() || 0;
+                } else {
+                    aText = aText.toLowerCase();
+                    bText = bText.toLowerCase();
+                }
+
+                if (aText < bText) return currentSortOrder === 'asc' ? -1 : 1;
+                if (aText > bText) return currentSortOrder === 'asc' ? 1 : -1;
+                return 0;
+            });
+
+            // Re-append sorted rows
+            rows.forEach(row => tbody.appendChild(row));
         }
 
         // Password Authentication Logic
@@ -396,6 +437,9 @@
                     } else {
                         logMessage('Inserisci la tua API key personalizzata.');
                     }
+
+                    // Optionally, retrieve forms immediately after authentication
+                    retrieveForms();
                 } else {
                     // Show error message
                     authError.textContent = 'Password non autorizzata.';
