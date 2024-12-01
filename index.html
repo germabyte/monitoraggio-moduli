@@ -32,6 +32,36 @@
         #mainApp {
             display: none;
         }
+        /* Sort arrow styles */
+        .sort-arrow {
+            margin-left: 5px;
+        }
+        /* Responsive adjustments */
+        @media (max-width: 576px) {
+            body {
+                padding: 10px;
+            }
+            #logBox {
+                height: 150px;
+            }
+            .btn {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+            .progress {
+                height: 20px;
+            }
+            #refreshCountdown {
+                font-size: 0.9rem;
+            }
+        }
+        /* Add transition for table rows */
+        #formsTable tbody tr {
+            transition: background-color 0.3s ease;
+        }
+        .row-updated {
+            background-color: #d1e7dd !important;
+        }
     </style>
 </head>
 <body>
@@ -47,9 +77,9 @@
             </div>
             
             <!-- Buttons -->
-            <div class="mb-3">
-                <button class="btn btn-primary me-2" id="retrieveFormsBtn">Recupera Moduli</button>
-                <button class="btn btn-danger" id="deleteSubmissionsBtn">Elimina Invii Selezionati</button>
+            <div class="mb-3 d-flex flex-wrap">
+                <button class="btn btn-primary me-2 mb-2" id="retrieveFormsBtn">Recupera Moduli</button>
+                <button class="btn btn-danger mb-2" id="deleteSubmissionsBtn">Elimina Invii Selezionati</button>
             </div>
             
             <!-- Progress Bar -->
@@ -67,11 +97,11 @@
                     <thead>
                         <tr>
                             <th data-column="select">Seleziona</th>
-                            <th data-column="title">Titolo</th>
-                            <th data-column="id">ID</th>
-                            <th data-column="status">Stato</th>
-                            <th data-column="submissions">Invii</th>
-                            <th data-column="lastSubmission">Ultimo Invio</th>
+                            <th data-column="title">Titolo <span class="sort-arrow"></span></th>
+                            <th data-column="id">ID <span class="sort-arrow"></span></th>
+                            <th data-column="status">Stato <span class="sort-arrow"></span></th>
+                            <th data-column="submissions">Invii <span class="sort-arrow"></span></th>
+                            <th data-column="lastSubmission">Ultimo Invio <span class="sort-arrow"></span></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -133,6 +163,9 @@
         // Global variable to keep track of selected forms
         let selectedFormIds = new Set();
 
+        // Store form data to compare during refresh
+        let formDataMap = new Map();
+
         // Event Listeners
         document.getElementById('retrieveFormsBtn').addEventListener('click', () => {
             retrieveForms();
@@ -163,15 +196,6 @@
                 return;
             }
 
-            // Update selectedFormIds based on current selections
-            selectedFormIds.clear();
-            const currentCheckboxes = document.querySelectorAll('.form-select-checkbox');
-            currentCheckboxes.forEach(checkbox => {
-                if (checkbox.checked) {
-                    selectedFormIds.add(checkbox.getAttribute('data-form-id'));
-                }
-            });
-
             logMessage('Recupero dei moduli...');
             try {
                 const response = await fetch(`${BASE_URL}/user/forms?apiKey=${apiKey}`);
@@ -186,9 +210,11 @@
                 }
 
                 const forms = data.content;
-                const tbody = document.querySelector('#formsTable tbody');
-                tbody.innerHTML = ''; // Clear existing rows
 
+                // Map to store new form data
+                const newFormDataMap = new Map();
+
+                // Process each form
                 for (let [index, form] of forms.entries()) {
                     const formTitle = form.title || 'Senza Titolo';
                     const formId = form.id || 'N/A';
@@ -199,41 +225,31 @@
                     const submissionCount = await getSubmissionCount(formId, apiKey);
                     const lastSubmissionDate = await getLastSubmissionDate(formId, apiKey);
 
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td class="text-center">
-                            <input type="checkbox" class="form-select-checkbox" data-form-id="${formId}" ${isActive ? '' : 'disabled'} ${selectedFormIds.has(formId) ? 'checked' : ''}>
-                        </td>
-                        <td>${formTitle}</td>
-                        <td>${formId}</td>
-                        <td>${formStatus}</td>
-                        <td>${submissionCount}</td>
-                        <td>${lastSubmissionDate}</td>
-                    `;
-                    if (!isActive) {
-                        row.classList.add('table-secondary');
-                    }
-                    tbody.appendChild(row);
-
-                    // Add event listener to update selectedFormIds when the checkbox is changed
-                    const checkbox = row.querySelector('.form-select-checkbox');
-                    if (checkbox) {
-                        checkbox.addEventListener('change', function() {
-                            const formId = this.getAttribute('data-form-id');
-                            if (this.checked) {
-                                selectedFormIds.add(formId);
-                            } else {
-                                selectedFormIds.delete(formId);
-                            }
-                        });
-                    }
+                    // Store form data
+                    newFormDataMap.set(formId, {
+                        formTitle,
+                        formId,
+                        formStatus,
+                        isActive,
+                        submissionCount,
+                        lastSubmissionDate
+                    });
                 }
+
+                // Update the table with new data
+                updateTable(newFormDataMap);
+
+                // Update the formDataMap with new data
+                formDataMap = newFormDataMap;
 
                 logMessage(`Recuperati ${forms.length} moduli.`);
 
                 // Apply the current sort after refreshing the table
                 if (currentSortColumn) {
                     applyCurrentSort();
+                    updateSortArrows();
+                } else {
+                    updateSortArrows();
                 }
             } catch (error) {
                 logMessage(`Errore nel recupero dei moduli: ${error.message}`);
@@ -280,6 +296,101 @@
             }
         }
 
+        // Function to update the table with new form data
+        function updateTable(newFormDataMap) {
+            const tbody = document.querySelector('#formsTable tbody');
+            const existingRows = tbody.querySelectorAll('tr');
+
+            // Map existing rows by formId for quick lookup
+            const existingRowsMap = new Map();
+            existingRows.forEach(row => {
+                const formId = row.getAttribute('data-form-id');
+                existingRowsMap.set(formId, row);
+            });
+
+            // Keep track of rows that have been updated or added
+            const processedFormIds = new Set();
+
+            newFormDataMap.forEach((formData, formId) => {
+                const existingRow = existingRowsMap.get(formId);
+                if (existingRow) {
+                    // Update existing row if data has changed
+                    const cells = existingRow.children;
+
+                    const submissionCountCell = cells[4];
+                    const lastSubmissionCell = cells[5];
+
+                    const prevSubmissionCount = submissionCountCell.innerText;
+                    const prevLastSubmission = lastSubmissionCell.innerText;
+
+                    if (prevSubmissionCount != formData.submissionCount || prevLastSubmission != formData.lastSubmissionDate) {
+                        submissionCountCell.innerText = formData.submissionCount;
+                        lastSubmissionCell.innerText = formData.lastSubmissionDate;
+
+                        // Highlight updated row
+                        existingRow.classList.add('row-updated');
+                        setTimeout(() => {
+                            existingRow.classList.remove('row-updated');
+                        }, 1000);
+                    }
+
+                    // Update checkbox state
+                    const checkbox = existingRow.querySelector('.form-select-checkbox');
+                    checkbox.disabled = !formData.isActive;
+
+                    processedFormIds.add(formId);
+                } else {
+                    // Add new row
+                    const row = document.createElement('tr');
+                    row.setAttribute('data-form-id', formId);
+                    row.innerHTML = `
+                        <td class="text-center">
+                            <input type="checkbox" class="form-select-checkbox" data-form-id="${formId}" ${formData.isActive ? '' : 'disabled'} ${selectedFormIds.has(formId) ? 'checked' : ''}>
+                        </td>
+                        <td>${formData.formTitle}</td>
+                        <td>${formData.formId}</td>
+                        <td>${formData.formStatus}</td>
+                        <td>${formData.submissionCount}</td>
+                        <td>${formData.lastSubmissionDate}</td>
+                    `;
+                    if (!formData.isActive) {
+                        row.classList.add('table-secondary');
+                    }
+                    tbody.appendChild(row);
+
+                    // Add event listener to update selectedFormIds when the checkbox is changed
+                    const checkbox = row.querySelector('.form-select-checkbox');
+                    if (checkbox) {
+                        checkbox.addEventListener('change', function() {
+                            const formId = this.getAttribute('data-form-id');
+                            if (this.checked) {
+                                selectedFormIds.add(formId);
+                            } else {
+                                selectedFormIds.delete(formId);
+                            }
+                        });
+                    }
+
+                    // Highlight new row
+                    row.classList.add('row-updated');
+                    setTimeout(() => {
+                        row.classList.remove('row-updated');
+                    }, 1000);
+
+                    processedFormIds.add(formId);
+                }
+            });
+
+            // Remove rows that are no longer present
+            existingRows.forEach(row => {
+                const formId = row.getAttribute('data-form-id');
+                if (!newFormDataMap.has(formId)) {
+                    tbody.removeChild(row);
+                    selectedFormIds.delete(formId);
+                }
+            });
+        }
+
         // Function to delete selected submissions
         async function deleteSelectedSubmissions() {
             const apiKey = document.getElementById('apiKey').value.trim();
@@ -309,6 +420,13 @@
                 row.children[5].innerText = 'N/A';
                 checkbox.checked = false;
                 selectedFormIds.delete(formId); // Update the selected forms
+
+                // Update formDataMap
+                if (formDataMap.has(formId)) {
+                    const formData = formDataMap.get(formId);
+                    formData.submissionCount = 0;
+                    formData.lastSubmissionDate = 'N/A';
+                }
             }
 
             alert('Processo di eliminazione completato. Controlla il registro per i dettagli.');
@@ -367,32 +485,8 @@
                 currentSortColumn = column;
             }
 
-            const tbody = document.querySelector('#formsTable tbody');
-            const rows = Array.from(tbody.querySelectorAll('tr'));
-
-            rows.sort((a, b) => {
-                let aText = a.querySelector(`td:nth-child(${getColumnIndex(column)})`).innerText.trim();
-                let bText = b.querySelector(`td:nth-child(${getColumnIndex(column)})`).innerText.trim();
-
-                // Handle numeric and date sorting
-                if (column === 'submissions') {
-                    aText = parseInt(aText) || 0;
-                    bText = parseInt(bText) || 0;
-                } else if (column === 'lastSubmission') {
-                    aText = new Date(aText).getTime() || 0;
-                    bText = new Date(bText).getTime() || 0;
-                } else {
-                    aText = aText.toLowerCase();
-                    bText = bText.toLowerCase();
-                }
-
-                if (aText < bText) return currentSortOrder === 'asc' ? -1 : 1;
-                if (aText > bText) return currentSortOrder === 'asc' ? 1 : -1;
-                return 0;
-            });
-
-            // Re-append sorted rows
-            rows.forEach(row => tbody.appendChild(row));
+            applyCurrentSort();
+            updateSortArrows();
         }
 
         // Helper function to get column index based on column name
@@ -431,6 +525,26 @@
 
             // Re-append sorted rows
             rows.forEach(row => tbody.appendChild(row));
+        }
+
+        // Function to update the sort arrows in the table headers
+        function updateSortArrows() {
+            // Remove existing arrows
+            document.querySelectorAll('#formsTable th').forEach(header => {
+                const sortArrow = header.querySelector('.sort-arrow');
+                if (sortArrow) {
+                    sortArrow.innerHTML = '';
+                }
+            });
+
+            // Add arrow to the currently sorted column
+            if (currentSortColumn) {
+                const header = document.querySelector(`#formsTable th[data-column="${currentSortColumn}"]`);
+                const sortArrow = header.querySelector('.sort-arrow');
+                if (sortArrow) {
+                    sortArrow.innerHTML = currentSortOrder === 'asc' ? '▲' : '▼';
+                }
+            }
         }
 
         // Password Authentication Logic
@@ -503,6 +617,9 @@
                 keyboard: false
             });
             authModalInstance.show();
+
+            // Start the progress bar timer on initial page load
+            startProgressBarTimer();
         });
 
         // Progress Bar Functions
@@ -539,11 +656,6 @@
             clearInterval(progressBarTimer);
             startProgressBarTimer();
         }
-
-        // Start the progress bar timer on initial page load
-        document.addEventListener('DOMContentLoaded', function() {
-            startProgressBarTimer();
-        });
     </script>
 </body>
 </html>
