@@ -5,6 +5,8 @@
     <title>Gestore Invii JotForm</title>
     <!-- Bootstrap CSS for styling -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css">
     <style>
         body {
             padding: 20px;
@@ -93,15 +95,15 @@
             
             <!-- Forms Table -->
             <div class="table-responsive">
-                <table class="table table-striped" id="formsTable">
+                <table class="table table-striped table-hover table-bordered align-middle" id="formsTable">
                     <thead>
                         <tr>
-                            <th data-column="select">Seleziona</th>
+                            <th data-column="select" class="text-center">Seleziona</th>
                             <th data-column="title">Titolo <span class="sort-arrow"></span></th>
                             <th data-column="id">ID <span class="sort-arrow"></span></th>
                             <th data-column="status">Stato <span class="sort-arrow"></span></th>
-                            <th data-column="submissions">Invii <span class="sort-arrow"></span></th>
-                            <th data-column="lastSubmission">Ultimo Invio <span class="sort-arrow"></span></th>
+                            <th data-column="submissions" class="text-end">Invii <span class="sort-arrow"></span></th>
+                            <th data-column="lastSubmission" class="text-end">Ultimo Invio <span class="sort-arrow"></span></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -219,7 +221,7 @@
                     const formTitle = form.title || 'Senza Titolo';
                     const formId = form.id || 'N/A';
                     const formStatus = form.status || 'ATTIVATO';
-                    const isActive = formStatus.toUpperCase() === 'ATTIVATO';
+                    const isActive = formStatus.toUpperCase() === 'ENABLED' || formStatus.toUpperCase() === 'ATTIVATO';
 
                     logMessage(`Recupero del conteggio degli invii per il modulo ${index + 1}/${forms.length}: '${formTitle}' (ID: ${formId})`);
                     const submissionCount = await getSubmissionCount(formId, apiKey);
@@ -336,7 +338,19 @@
 
                     // Update checkbox state
                     const checkbox = existingRow.querySelector('.form-select-checkbox');
-                    checkbox.disabled = !formData.isActive;
+                    // Modified line: Disable checkbox if submissionCount is 0
+                    checkbox.disabled = formData.submissionCount === 0;
+
+                    // Update status badge
+                    const statusCell = cells[3];
+                    statusCell.innerHTML = formData.isActive ? '<span class="badge bg-success">Attivato</span>' : '<span class="badge bg-secondary">Disattivato</span>';
+
+                    // Update row class for inactive forms
+                    if (!formData.isActive) {
+                        existingRow.classList.add('table-secondary');
+                    } else {
+                        existingRow.classList.remove('table-secondary');
+                    }
 
                     processedFormIds.add(formId);
                 } else {
@@ -345,13 +359,13 @@
                     row.setAttribute('data-form-id', formId);
                     row.innerHTML = `
                         <td class="text-center">
-                            <input type="checkbox" class="form-select-checkbox" data-form-id="${formId}" ${formData.isActive ? '' : 'disabled'} ${selectedFormIds.has(formId) ? 'checked' : ''}>
+                            <input type="checkbox" class="form-select-checkbox" data-form-id="${formId}" ${formData.submissionCount > 0 ? '' : 'disabled'} ${selectedFormIds.has(formId) ? 'checked' : ''}>
                         </td>
                         <td>${formData.formTitle}</td>
                         <td>${formData.formId}</td>
-                        <td>${formData.formStatus}</td>
-                        <td>${formData.submissionCount}</td>
-                        <td>${formData.lastSubmissionDate}</td>
+                        <td>${formData.isActive ? '<span class="badge bg-success">Attivato</span>' : '<span class="badge bg-secondary">Disattivato</span>'}</td>
+                        <td class="text-end">${formData.submissionCount}</td>
+                        <td class="text-end">${formData.lastSubmissionDate}</td>
                     `;
                     if (!formData.isActive) {
                         row.classList.add('table-secondary');
@@ -401,7 +415,7 @@
 
             const checkboxes = document.querySelectorAll('.form-select-checkbox:checked');
             if (checkboxes.length === 0) {
-                alert('Per favore seleziona almeno un modulo attivo per eliminare gli invii.');
+                alert('Per favore seleziona almeno un modulo con invii per eliminare gli invii.');
                 return;
             }
 
@@ -419,6 +433,7 @@
                 row.children[4].innerText = '0';
                 row.children[5].innerText = 'N/A';
                 checkbox.checked = false;
+                checkbox.disabled = true; // Disable checkbox after deleting submissions
                 selectedFormIds.delete(formId); // Update the selected forms
 
                 // Update formDataMap
@@ -542,7 +557,7 @@
                 const header = document.querySelector(`#formsTable th[data-column="${currentSortColumn}"]`);
                 const sortArrow = header.querySelector('.sort-arrow');
                 if (sortArrow) {
-                    sortArrow.innerHTML = currentSortOrder === 'asc' ? '▲' : '▼';
+                    sortArrow.innerHTML = currentSortOrder === 'asc' ? '<i class="bi bi-caret-up-fill"></i>' : '<i class="bi bi-caret-down-fill"></i>';
                 }
             }
         }
