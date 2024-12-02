@@ -185,7 +185,7 @@
         // Function to log messages with timestamps
         function logMessage(message) {
             const logBox = document.getElementById('logBox');
-            const timestamp = new Date().toLocaleString('it-IT', { timeZone: 'Europe/Rome' });
+            const timestamp = new Date().toLocaleString();
             logBox.innerHTML += `<div><strong>${timestamp}:</strong> ${message}</div>`;
             logBox.scrollTop = logBox.scrollHeight;
         }
@@ -264,25 +264,14 @@
         // Function to get submission count for a form
         async function getSubmissionCount(formId, apiKey) {
             try {
-                let count = 0;
-                let page = 1;
-                const limit = 100; // Adjust as needed
-                let hasMore = true;
-
-                while (hasMore) {
-                    const response = await fetch(`${BASE_URL}/form/${formId}/submissions?apiKey=${apiKey}&limit=${limit}&page=${page}`);
-                    if (!response.ok) throw new Error(`Errore HTTP! Stato: ${response.status}`);
-                    const data = await response.json();
-
-                    if (data.content && data.content.length > 0) {
-                        count += data.content.length;
-                        page++;
-                    } else {
-                        hasMore = false;
-                    }
-                }
-
-                return count;
+                const response = await fetch(`${BASE_URL}/form/${formId}/submissions?apiKey=${apiKey}&limit=1`);
+                if (!response.ok) throw new Error(`Errore HTTP! Stato: ${response.status}`);
+                const total = response.headers.get('X-Total-Count');
+                if (total) return parseInt(total);
+                
+                // Fallback if header not available
+                const data = await response.json();
+                return data.content ? data.content.length : 0;
             } catch (error) {
                 logMessage(`Errore nel recuperare il conteggio degli invii per il modulo ${formId}: ${error.message}`);
                 return 0;
@@ -299,7 +288,7 @@
                 if (data.content && data.content.length > 0) {
                     const createdAt = data.content[0].created_at;
                     const date = new Date(createdAt);
-                    return isNaN(date.getTime()) ? 'N/A' : date.toLocaleString('it-IT', { timeZone: 'Europe/Rome' });
+                    return isNaN(date.getTime()) ? 'N/A' : date.toLocaleString();
                 } else {
                     return 'N/A';
                 }
@@ -349,6 +338,7 @@
 
                     // Update checkbox state
                     const checkbox = existingRow.querySelector('.form-select-checkbox');
+                    // Modified line: Disable checkbox if submissionCount is 0
                     checkbox.disabled = formData.submissionCount === 0;
 
                     // Update status badge
@@ -461,17 +451,16 @@
         // Function to delete all submissions for a form
         async function deleteAllSubmissions(formId, apiKey) {
             try {
-                let hasSubmissions = true;
                 let page = 1;
                 const limit = 100; // Adjust as needed
+                let hasMore = true;
 
-                while (hasSubmissions) {
+                while (hasMore) {
                     const response = await fetch(`${BASE_URL}/form/${formId}/submissions?apiKey=${apiKey}&limit=${limit}&page=${page}`);
                     if (!response.ok) throw new Error(`Errore HTTP! Stato: ${response.status}`);
                     const data = await response.json();
 
                     if (data.content && data.content.length > 0) {
-                        logMessage(`Eliminando ${data.content.length} invii dalla pagina ${page} per il modulo ID ${formId}.`);
                         for (let submission of data.content) {
                             const submissionId = submission.id;
                             const deleteResponse = await fetch(`${BASE_URL}/submission/${submissionId}?apiKey=${apiKey}`, {
@@ -483,10 +472,11 @@
                                 logMessage(`Impossibile eliminare l'invio ID: ${submissionId}. Stato: ${deleteResponse.status}`);
                             }
                         }
-                        // After deletion, reset to first page in case of dynamic changes
-                        page = 1;
+                        // Check if there are more submissions
+                        hasMore = data.currentPage < data.totalPages;
+                        page++;
                     } else {
-                        hasSubmissions = false;
+                        hasMore = false;
                     }
                 }
 
