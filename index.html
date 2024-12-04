@@ -286,10 +286,23 @@
 				const data = await response.json();
 
 				if (data.content && data.content.length > 0) {
-					const createdAt = data.content[0].created_at;
-					const date = new Date(createdAt);
+					const createdAt = data.content[0].created_at; // e.g., '2024-12-03 01:23:09'
 
-					// Define options for Central Europe Time
+					// Determine the UTC offset for Eastern Time (ET) at the date of submission
+					const [datePart, timePart] = createdAt.split(' ');
+					const [year, month, day] = datePart.split('-').map(Number);
+					const [hour, minute, second] = timePart.split(':').map(Number);
+
+					const submissionDate = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+
+					// Determine if the date is in Daylight Saving Time
+					const isDST = isDaylightSavingTimeInET(submissionDate);
+
+					// Adjust the time by adding the ET offset to UTC
+					const etOffset = isDST ? -4 : -5; // UTC offset for ET in hours
+					submissionDate.setUTCHours(submissionDate.getUTCHours() - etOffset);
+
+					// Format the date in Central European Time
 					const options = {
 						timeZone: 'Europe/Rome', // Central European Time zone
 						year: 'numeric', month: '2-digit', day: '2-digit',
@@ -297,7 +310,7 @@
 					};
 					const formatter = new Intl.DateTimeFormat('it-IT', options);
 
-					return isNaN(date.getTime()) ? 'N/A' : formatter.format(date);
+					return formatter.format(submissionDate);
 				} else {
 					return 'N/A';
 				}
@@ -306,6 +319,22 @@
 				return 'N/A';
 			}
 		}
+
+		// Helper function to determine if a date is in Daylight Saving Time in ET
+		function isDaylightSavingTimeInET(date) {
+			const year = date.getUTCFullYear();
+
+			// Second Sunday in March at 2:00 AM
+			const dstStart = new Date(Date.UTC(year, 2, 8, 7)); // March 8th at 2:00 AM ET
+			dstStart.setUTCDate(8 + (7 - dstStart.getUTCDay()) % 7);
+
+			// First Sunday in November at 2:00 AM
+			const dstEnd = new Date(Date.UTC(year, 10, 1, 6)); // November 1st at 2:00 AM ET
+			dstEnd.setUTCDate(1 + (7 - dstEnd.getUTCDay()) % 7);
+
+			return date >= dstStart && date < dstEnd;
+		}
+
 
         // Function to update the table with new form data
         function updateTable(newFormDataMap) {
