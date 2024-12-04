@@ -216,31 +216,42 @@
                 // Map to store new form data
                 const newFormDataMap = new Map();
 
-                // Use Promise.all to fetch submission counts and last submission dates in parallel
-                const formPromises = forms.map(async (form, index) => {
-                    const formTitle = form.title || 'Senza Titolo';
-                    const formId = form.id || 'N/A';
-                    const formStatus = form.status || 'ATTIVATO';
-                    const isActive = formStatus.toUpperCase() === 'ENABLED' || formStatus.toUpperCase() === 'ATTIVATO';
+                // To manage API rate limits, limit concurrent requests
+                const concurrencyLimit = 5;
+                let index = 0;
 
-                    logMessage(`Recupero del conteggio degli invii per il modulo ${index + 1}/${forms.length}: '${formTitle}' (ID: ${formId})`);
-                    
-                    // Fetch submission count using the /count endpoint
-                    const submissionCount = await getSubmissionCount(formId, apiKey);
-                    const lastSubmissionDate = await getLastSubmissionDate(formId, apiKey);
+                async function processBatch() {
+                    const batch = forms.slice(index, index + concurrencyLimit);
+                    if (batch.length === 0) return;
 
-                    // Store form data
-                    newFormDataMap.set(formId, {
-                        formTitle,
-                        formId,
-                        formStatus,
-                        isActive,
-                        submissionCount,
-                        lastSubmissionDate
+                    const promises = batch.map(async (form, idx) => {
+                        const formIndex = index + idx + 1;
+                        const formTitle = form.title || 'Senza Titolo';
+                        const formId = form.id || 'N/A';
+                        const formStatus = form.status || 'ATTIVATO';
+                        const isActive = formStatus.toUpperCase() === 'ENABLED' || formStatus.toUpperCase() === 'ATTIVATO';
+
+                        logMessage(`Recupero del conteggio degli invii per il modulo ${formIndex}/${forms.length}: '${formTitle}' (ID: ${formId})`);
+                        const submissionCount = await getSubmissionCount(formId, apiKey);
+                        const lastSubmissionDate = await getLastSubmissionDate(formId, apiKey);
+
+                        // Store form data
+                        newFormDataMap.set(formId, {
+                            formTitle,
+                            formId,
+                            formStatus,
+                            isActive,
+                            submissionCount,
+                            lastSubmissionDate
+                        });
                     });
-                });
 
-                await Promise.all(formPromises);
+                    await Promise.all(promises);
+                    index += concurrencyLimit;
+                    await processBatch();
+                }
+
+                await processBatch();
 
                 // Update the table with new data
                 updateTable(newFormDataMap);
@@ -265,17 +276,25 @@
             }
         }
 
-        // Function to get submission count for a form using the /count endpoint
+        // Function to get submission count for a form
         async function getSubmissionCount(formId, apiKey) {
             try {
-                const response = await fetch(`${BASE_URL}/form/${formId}/submissions/count?apiKey=${apiKey}`);
+                const response = await fetch(`${BASE_URL}/form/${formId}/submissions?apiKey=${apiKey}&limit=1`);
                 if (!response.ok) throw new Error(`Errore HTTP! Stato: ${response.status}`);
-                const data = await response.json();
 
-                if (data && typeof data.result === 'number') {
-                    return data.result;
+                const total = response.headers.get('X-Total-Count');
+                if (total) {
+                    logMessage(`Conteggio degli invii per il modulo ID ${formId}: ${total}`);
+                    return parseInt(total);
+                }
+
+                // Fallback if header not available
+                const data = await response.json();
+                if (data.content) {
+                    logMessage(`Recuperato ${data.content.length} invio/i per il modulo ID ${formId} tramite fallback.`);
+                    return data.content.length;
                 } else {
-                    logMessage(`Struttura di risposta inaspettata per il conteggio degli invii del modulo ${formId}.`);
+                    logMessage(`Nessun invio trovato per il modulo ID ${formId}.`);
                     return 0;
                 }
             } catch (error) {
@@ -316,8 +335,11 @@
                     };
                     const formatter = new Intl.DateTimeFormat('it-IT', options);
 
-                    return formatter.format(submissionDate);
+                    const formattedDate = formatter.format(submissionDate);
+                    logMessage(`Ultimo invio per il modulo ID ${formId}: ${formattedDate}`);
+                    return formattedDate;
                 } else {
+                    logMessage(`Nessun invio trovato per il modulo ID ${formId}.`);
                     return 'N/A';
                 }
             } catch (error) {
@@ -340,7 +362,6 @@
 
             return date >= dstStart && date < dstEnd;
         }
-
 
         // Function to update the table with new form data
         function updateTable(newFormDataMap) {
