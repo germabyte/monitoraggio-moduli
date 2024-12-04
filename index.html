@@ -190,85 +190,95 @@
             logBox.scrollTop = logBox.scrollHeight;
         }
 
-		// Function to retrieve all forms
-		async function retrieveForms() {
-			const apiKey = document.getElementById('apiKey').value.trim();
-			if (!apiKey) {
-				alert('Per favore inserisci la tua Chiave API JotForm.');
-				return;
-			}
+        // Function to retrieve all forms
+        async function retrieveForms() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            if (!apiKey) {
+                alert('Per favore inserisci la tua Chiave API JotForm.');
+                return;
+            }
 
-			logMessage('Recupero dei moduli...');
-			try {
-				const response = await fetch(`${BASE_URL}/user/forms?apiKey=${apiKey}`);
-				if (!response.ok) {
-					throw new Error(`Errore HTTP! Stato: ${response.status}`);
-				}
-				const data = await response.json();
+            logMessage('Recupero dei moduli...');
+            try {
+                const response = await fetch(`${BASE_URL}/user/forms?apiKey=${apiKey}`);
+                if (!response.ok) {
+                    throw new Error(`Errore HTTP! Stato: ${response.status}`);
+                }
+                const data = await response.json();
 
-				if (!data.content) {
-					logMessage('Struttura di risposta inaspettata durante il recupero dei moduli.');
-					return;
-				}
+                if (!data.content) {
+                    logMessage('Struttura di risposta inaspettata durante il recupero dei moduli.');
+                    return;
+                }
 
-				const forms = data.content;
+                const forms = data.content;
 
-				// Map to store new form data
-				const newFormDataMap = new Map();
+                // Map to store new form data
+                const newFormDataMap = new Map();
 
-				// Process each form
-				for (let [index, form] of forms.entries()) {
-					const formTitle = form.title || 'Senza Titolo';
-					const formId = form.id || 'N/A';
-					const formStatus = form.status || 'ATTIVATO';
-					const isActive = formStatus.toUpperCase() === 'ENABLED' || formStatus.toUpperCase() === 'ATTIVATO';
+                // Process each form
+                for (let [index, form] of forms.entries()) {
+                    const formTitle = form.title || 'Senza Titolo';
+                    const formId = form.id || 'N/A';
+                    const formStatus = form.status || 'ATTIVATO';
+                    const isActive = formStatus.toUpperCase() === 'ENABLED' || formStatus.toUpperCase() === 'ATTIVATO';
 
-					// Extract submission count directly from the form data
-					const submissionCount = form.count && form.count.total ? form.count.total : 0;
+                    logMessage(`Recupero del conteggio degli invii per il modulo ${index + 1}/${forms.length}: '${formTitle}' (ID: ${formId})`);
+                    const submissionCount = await getSubmissionCount(formId, apiKey);
+                    const lastSubmissionDate = await getLastSubmissionDate(formId, apiKey);
 
-					logMessage(`Modulo ${index + 1}/${forms.length}: '${formTitle}' (ID: ${formId}), Invii: ${submissionCount}`);
+                    // Store form data
+                    newFormDataMap.set(formId, {
+                        formTitle,
+                        formId,
+                        formStatus,
+                        isActive,
+                        submissionCount,
+                        lastSubmissionDate
+                    });
+                }
 
-					// Fetch the last submission date if needed
-					const lastSubmissionDate = await getLastSubmissionDate(formId, apiKey);
+                // Update the table with new data
+                updateTable(newFormDataMap);
 
-					// Store form data
-					newFormDataMap.set(formId, {
-						formTitle,
-						formId,
-						formStatus,
-						isActive,
-						submissionCount,
-						lastSubmissionDate
-					});
-				}
+                // Update the formDataMap with new data
+                formDataMap = newFormDataMap;
 
-				// Update the table with new data
-				updateTable(newFormDataMap);
+                logMessage(`Recuperati ${forms.length} moduli.`);
 
-				// Update the formDataMap with new data
-				formDataMap = newFormDataMap;
+                // Apply the current sort after refreshing the table
+                if (currentSortColumn) {
+                    applyCurrentSort();
+                    updateSortArrows();
+                } else {
+                    updateSortArrows();
+                }
+            } catch (error) {
+                logMessage(`Errore nel recupero dei moduli: ${error.message}`);
+                console.error(error);
+            } finally {
+                resetProgressBarTimer();
+            }
+        }
 
-				logMessage(`Recuperati ${forms.length} moduli.`);
+        // Function to get submission count for a form
+        async function getSubmissionCount(formId, apiKey) {
+            try {
+                const response = await fetch(`${BASE_URL}/form/${formId}/submissions?apiKey=${apiKey}&limit=1`);
+                if (!response.ok) throw new Error(`Errore HTTP! Stato: ${response.status}`);
+                const total = response.headers.get('X-Total-Count');
+                if (total) return parseInt(total);
+                
+                // Fallback if header not available
+                const data = await response.json();
+                return data.content ? data.content.length : 0;
+            } catch (error) {
+                logMessage(`Errore nel recuperare il conteggio degli invii per il modulo ${formId}: ${error.message}`);
+                return 0;
+            }
+        }
 
-				// Apply the current sort after refreshing the table
-				if (currentSortColumn) {
-					applyCurrentSort();
-					updateSortArrows();
-				} else {
-					updateSortArrows();
-				}
-			} catch (error) {
-				logMessage(`Errore nel recupero dei moduli: ${error.message}`);
-				console.error(error);
-			} finally {
-				resetProgressBarTimer();
-			}
-		}
-
-
-		
-
-        // Function to get last submission date for a form
+		// Function to get last submission date for a form
 		async function getLastSubmissionDate(formId, apiKey) {
 			try {
 				const response = await fetch(`${BASE_URL}/form/${formId}/submissions?apiKey=${apiKey}&limit=1&orderby=created_at&sort=desc`);
