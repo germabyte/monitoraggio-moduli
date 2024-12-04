@@ -200,7 +200,8 @@
 
             logMessage('Recupero dei moduli...');
             try {
-                const response = await fetch(`${BASE_URL}/user/forms?apiKey=${apiKey}`);
+                // Add counts=true to get submission counts
+                const response = await fetch(`${BASE_URL}/user/forms?apiKey=${apiKey}&counts=true`);
                 if (!response.ok) {
                     throw new Error(`Errore HTTP! Stato: ${response.status}`);
                 }
@@ -223,8 +224,10 @@
                     const formStatus = form.status || 'ATTIVATO';
                     const isActive = formStatus.toUpperCase() === 'ENABLED' || formStatus.toUpperCase() === 'ATTIVATO';
 
-                    logMessage(`Recupero del conteggio degli invii per il modulo ${index + 1}/${forms.length}: '${formTitle}' (ID: ${formId})`);
-                    const submissionCount = await getSubmissionCount(formId, apiKey);
+                    // Get submission count from form data
+                    const submissionCount = form.count || 0;
+
+                    logMessage(`Modulo ${index + 1}/${forms.length}: '${formTitle}' (ID: ${formId}) ha ${submissionCount} invii`);
                     const lastSubmissionDate = await getLastSubmissionDate(formId, apiKey);
 
                     // Store form data
@@ -261,22 +264,7 @@
             }
         }
 
-        // Function to get submission count for a form
-        async function getSubmissionCount(formId, apiKey) {
-            try {
-                const response = await fetch(`${BASE_URL}/form/${formId}/submissions?apiKey=${apiKey}&limit=1`);
-                if (!response.ok) throw new Error(`Errore HTTP! Stato: ${response.status}`);
-                const total = response.headers.get('X-Total-Count');
-                if (total) return parseInt(total);
-                
-                // Fallback if header not available
-                const data = await response.json();
-                return data.content ? data.content.length : 0;
-            } catch (error) {
-                logMessage(`Errore nel recuperare il conteggio degli invii per il modulo ${formId}: ${error.message}`);
-                return 0;
-            }
-        }
+
 
         // Function to get last submission date for a form
 		async function getLastSubmissionDate(formId, apiKey) {
