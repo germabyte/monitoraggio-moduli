@@ -262,21 +262,23 @@
         }
 
         // Function to get submission count for a form
-        async function getSubmissionCount(formId, apiKey) {
-            try {
-                const response = await fetch(`${BASE_URL}/form/${formId}/submissions?apiKey=${apiKey}&limit=1`);
-                if (!response.ok) throw new Error(`Errore HTTP! Stato: ${response.status}`);
-                const total = response.headers.get('X-Total-Count');
-                if (total) return parseInt(total);
-                
-                // Fallback if header not available
-                const data = await response.json();
-                return data.content ? data.content.length : 0;
-            } catch (error) {
-                logMessage(`Errore nel recuperare il conteggio degli invii per il modulo ${formId}: ${error.message}`);
-                return 0;
-            }
-        }
+		async function getSubmissionCount(formId, apiKey) {
+			try {
+				const response = await fetch(`${BASE_URL}/form/${formId}/submissions?apiKey=${apiKey}&limit=0`);
+				if (!response.ok) throw new Error(`Errore HTTP! Stato: ${response.status}`);
+				const data = await response.json();
+				if (data.total !== undefined) {
+					return data.total;
+				} else {
+					return 0;
+				}
+			} catch (error) {
+				logMessage(`Errore nel recuperare il conteggio degli invii per il modulo ${formId}: ${error.message}`);
+				return 0;
+			}
+		}
+
+		
 
         // Function to get last submission date for a form
 		async function getLastSubmissionDate(formId, apiKey) {
