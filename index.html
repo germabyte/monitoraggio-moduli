@@ -279,24 +279,33 @@
         }
 
         // Function to get last submission date for a form
-        async function getLastSubmissionDate(formId, apiKey) {
-            try {
-                const response = await fetch(`${BASE_URL}/form/${formId}/submissions?apiKey=${apiKey}&limit=1&orderby=created_at&sort=desc`);
-                if (!response.ok) throw new Error(`Errore HTTP! Stato: ${response.status}`);
-                const data = await response.json();
+		async function getLastSubmissionDate(formId, apiKey) {
+			try {
+				const response = await fetch(`${BASE_URL}/form/${formId}/submissions?apiKey=${apiKey}&limit=1&orderby=created_at&sort=desc`);
+				if (!response.ok) throw new Error(`Errore HTTP! Stato: ${response.status}`);
+				const data = await response.json();
 
-                if (data.content && data.content.length > 0) {
-                    const createdAt = data.content[0].created_at;
-                    const date = new Date(createdAt);
-                    return isNaN(date.getTime()) ? 'N/A' : date.toLocaleString();
-                } else {
-                    return 'N/A';
-                }
-            } catch (error) {
-                logMessage(`Errore nel recuperare la data dell'ultimo invio per il modulo ${formId}: ${error.message}`);
-                return 'N/A';
-            }
-        }
+				if (data.content && data.content.length > 0) {
+					const createdAt = data.content[0].created_at;
+					const date = new Date(createdAt);
+
+					// Define options for Central Europe Time
+					const options = {
+						timeZone: 'Europe/Rome', // Central European Time zone
+						year: 'numeric', month: '2-digit', day: '2-digit',
+						hour: '2-digit', minute: '2-digit', second: '2-digit',
+					};
+					const formatter = new Intl.DateTimeFormat('it-IT', options);
+
+					return isNaN(date.getTime()) ? 'N/A' : formatter.format(date);
+				} else {
+					return 'N/A';
+				}
+			} catch (error) {
+				logMessage(`Errore nel recuperare la data dell'ultimo invio per il modulo ${formId}: ${error.message}`);
+				return 'N/A';
+			}
+		}
 
         // Function to update the table with new form data
         function updateTable(newFormDataMap) {
