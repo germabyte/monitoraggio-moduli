@@ -216,42 +216,27 @@
                 // Map to store new form data
                 const newFormDataMap = new Map();
 
-                // To manage API rate limits, limit concurrent requests
-                const concurrencyLimit = 5;
-                let index = 0;
+                // Process each form
+                for (let [index, form] of forms.entries()) {
+                    const formTitle = form.title || 'Senza Titolo';
+                    const formId = form.id || 'N/A';
+                    const formStatus = form.status || 'ATTIVATO';
+                    const isActive = formStatus.toUpperCase() === 'ENABLED' || formStatus.toUpperCase() === 'ATTIVATO';
 
-                async function processBatch() {
-                    const batch = forms.slice(index, index + concurrencyLimit);
-                    if (batch.length === 0) return;
+                    logMessage(`Recupero del conteggio degli invii per il modulo ${index + 1}/${forms.length}: '${formTitle}' (ID: ${formId})`);
+                    const submissionCount = await getSubmissionCount(formId, apiKey);
+                    const lastSubmissionDate = await getLastSubmissionDate(formId, apiKey);
 
-                    const promises = batch.map(async (form, idx) => {
-                        const formIndex = index + idx + 1;
-                        const formTitle = form.title || 'Senza Titolo';
-                        const formId = form.id || 'N/A';
-                        const formStatus = form.status || 'ATTIVATO';
-                        const isActive = formStatus.toUpperCase() === 'ENABLED' || formStatus.toUpperCase() === 'ATTIVATO';
-
-                        logMessage(`Recupero del conteggio degli invii per il modulo ${formIndex}/${forms.length}: '${formTitle}' (ID: ${formId})`);
-                        const submissionCount = await getSubmissionCount(formId, apiKey);
-                        const lastSubmissionDate = await getLastSubmissionDate(formId, apiKey);
-
-                        // Store form data
-                        newFormDataMap.set(formId, {
-                            formTitle,
-                            formId,
-                            formStatus,
-                            isActive,
-                            submissionCount,
-                            lastSubmissionDate
-                        });
+                    // Store form data
+                    newFormDataMap.set(formId, {
+                        formTitle,
+                        formId,
+                        formStatus,
+                        isActive,
+                        submissionCount,
+                        lastSubmissionDate
                     });
-
-                    await Promise.all(promises);
-                    index += concurrencyLimit;
-                    await processBatch();
                 }
-
-                await processBatch();
 
                 // Update the table with new data
                 updateTable(newFormDataMap);
@@ -281,22 +266,12 @@
             try {
                 const response = await fetch(`${BASE_URL}/form/${formId}/submissions?apiKey=${apiKey}&limit=1`);
                 if (!response.ok) throw new Error(`Errore HTTP! Stato: ${response.status}`);
-
                 const total = response.headers.get('X-Total-Count');
-                if (total) {
-                    logMessage(`Conteggio degli invii per il modulo ID ${formId}: ${total}`);
-                    return parseInt(total);
-                }
-
+                if (total) return parseInt(total);
+                
                 // Fallback if header not available
                 const data = await response.json();
-                if (data.content) {
-                    logMessage(`Recuperato ${data.content.length} invio/i per il modulo ID ${formId} tramite fallback.`);
-                    return data.content.length;
-                } else {
-                    logMessage(`Nessun invio trovato per il modulo ID ${formId}.`);
-                    return 0;
-                }
+                return data.content ? data.content.length : 0;
             } catch (error) {
                 logMessage(`Errore nel recuperare il conteggio degli invii per il modulo ${formId}: ${error.message}`);
                 return 0;
@@ -304,64 +279,62 @@
         }
 
         // Function to get last submission date for a form
-        async function getLastSubmissionDate(formId, apiKey) {
-            try {
-                const response = await fetch(`${BASE_URL}/form/${formId}/submissions?apiKey=${apiKey}&limit=1&orderby=created_at&sort=desc`);
-                if (!response.ok) throw new Error(`Errore HTTP! Stato: ${response.status}`);
-                const data = await response.json();
+		async function getLastSubmissionDate(formId, apiKey) {
+			try {
+				const response = await fetch(`${BASE_URL}/form/${formId}/submissions?apiKey=${apiKey}&limit=1&orderby=created_at&sort=desc`);
+				if (!response.ok) throw new Error(`Errore HTTP! Stato: ${response.status}`);
+				const data = await response.json();
 
-                if (data.content && data.content.length > 0) {
-                    const createdAt = data.content[0].created_at; // e.g., '2024-12-03 01:23:09'
+				if (data.content && data.content.length > 0) {
+					const createdAt = data.content[0].created_at; // e.g., '2024-12-03 01:23:09'
 
-                    // Determine the UTC offset for Eastern Time (ET) at the date of submission
-                    const [datePart, timePart] = createdAt.split(' ');
-                    const [year, month, day] = datePart.split('-').map(Number);
-                    const [hour, minute, second] = timePart.split(':').map(Number);
+					// Determine the UTC offset for Eastern Time (ET) at the date of submission
+					const [datePart, timePart] = createdAt.split(' ');
+					const [year, month, day] = datePart.split('-').map(Number);
+					const [hour, minute, second] = timePart.split(':').map(Number);
 
-                    const submissionDate = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+					const submissionDate = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
 
-                    // Determine if the date is in Daylight Saving Time
-                    const isDST = isDaylightSavingTimeInET(submissionDate);
+					// Determine if the date is in Daylight Saving Time
+					const isDST = isDaylightSavingTimeInET(submissionDate);
 
-                    // Adjust the time by adding the ET offset to UTC
-                    const etOffset = isDST ? -4 : -5; // UTC offset for ET in hours
-                    submissionDate.setUTCHours(submissionDate.getUTCHours() - etOffset);
+					// Adjust the time by adding the ET offset to UTC
+					const etOffset = isDST ? -4 : -5; // UTC offset for ET in hours
+					submissionDate.setUTCHours(submissionDate.getUTCHours() - etOffset);
 
-                    // Format the date in Central European Time
-                    const options = {
-                        timeZone: 'Europe/Rome', // Central European Time zone
-                        year: 'numeric', month: '2-digit', day: '2-digit',
-                        hour: '2-digit', minute: '2-digit', second: '2-digit',
-                    };
-                    const formatter = new Intl.DateTimeFormat('it-IT', options);
+					// Format the date in Central European Time
+					const options = {
+						timeZone: 'Europe/Rome', // Central European Time zone
+						year: 'numeric', month: '2-digit', day: '2-digit',
+						hour: '2-digit', minute: '2-digit', second: '2-digit',
+					};
+					const formatter = new Intl.DateTimeFormat('it-IT', options);
 
-                    const formattedDate = formatter.format(submissionDate);
-                    logMessage(`Ultimo invio per il modulo ID ${formId}: ${formattedDate}`);
-                    return formattedDate;
-                } else {
-                    logMessage(`Nessun invio trovato per il modulo ID ${formId}.`);
-                    return 'N/A';
-                }
-            } catch (error) {
-                logMessage(`Errore nel recuperare la data dell'ultimo invio per il modulo ${formId}: ${error.message}`);
-                return 'N/A';
-            }
-        }
+					return formatter.format(submissionDate);
+				} else {
+					return 'N/A';
+				}
+			} catch (error) {
+				logMessage(`Errore nel recuperare la data dell'ultimo invio per il modulo ${formId}: ${error.message}`);
+				return 'N/A';
+			}
+		}
 
-        // Helper function to determine if a date is in Daylight Saving Time in ET
-        function isDaylightSavingTimeInET(date) {
-            const year = date.getUTCFullYear();
+		// Helper function to determine if a date is in Daylight Saving Time in ET
+		function isDaylightSavingTimeInET(date) {
+			const year = date.getUTCFullYear();
 
-            // Second Sunday in March at 2:00 AM
-            const dstStart = new Date(Date.UTC(year, 2, 8, 7)); // March 8th at 2:00 AM ET
-            dstStart.setUTCDate(8 + (7 - dstStart.getUTCDay()) % 7);
+			// Second Sunday in March at 2:00 AM
+			const dstStart = new Date(Date.UTC(year, 2, 8, 7)); // March 8th at 2:00 AM ET
+			dstStart.setUTCDate(8 + (7 - dstStart.getUTCDay()) % 7);
 
-            // First Sunday in November at 2:00 AM
-            const dstEnd = new Date(Date.UTC(year, 10, 1, 6)); // November 1st at 2:00 AM ET
-            dstEnd.setUTCDate(1 + (7 - dstEnd.getUTCDay()) % 7);
+			// First Sunday in November at 2:00 AM
+			const dstEnd = new Date(Date.UTC(year, 10, 1, 6)); // November 1st at 2:00 AM ET
+			dstEnd.setUTCDate(1 + (7 - dstEnd.getUTCDay()) % 7);
 
-            return date >= dstStart && date < dstEnd;
-        }
+			return date >= dstStart && date < dstEnd;
+		}
+
 
         // Function to update the table with new form data
         function updateTable(newFormDataMap) {
@@ -387,10 +360,10 @@
                     const submissionCountCell = cells[4];
                     const lastSubmissionCell = cells[5];
 
-                    const prevSubmissionCount = parseInt(submissionCountCell.innerText);
+                    const prevSubmissionCount = submissionCountCell.innerText;
                     const prevLastSubmission = lastSubmissionCell.innerText;
 
-                    if (prevSubmissionCount !== formData.submissionCount || prevLastSubmission !== formData.lastSubmissionDate) {
+                    if (prevSubmissionCount != formData.submissionCount || prevLastSubmission != formData.lastSubmissionDate) {
                         submissionCountCell.innerText = formData.submissionCount;
                         lastSubmissionCell.innerText = formData.lastSubmissionDate;
 
@@ -403,11 +376,8 @@
 
                     // Update checkbox state
                     const checkbox = existingRow.querySelector('.form-select-checkbox');
-                    // Disable checkbox if submissionCount is 0
+                    // Modified line: Disable checkbox if submissionCount is 0
                     checkbox.disabled = formData.submissionCount === 0;
-
-                    // Update checkbox state based on selectedFormIds
-                    checkbox.checked = selectedFormIds.has(formId);
 
                     // Update status badge
                     const statusCell = cells[3];
@@ -529,7 +499,7 @@
                     const data = await response.json();
 
                     if (data.content && data.content.length > 0) {
-                        const deletePromises = data.content.map(async (submission) => {
+                        for (let submission of data.content) {
                             const submissionId = submission.id;
                             const deleteResponse = await fetch(`${BASE_URL}/submission/${submissionId}?apiKey=${apiKey}`, {
                                 method: 'DELETE'
@@ -539,10 +509,7 @@
                             } else {
                                 logMessage(`Impossibile eliminare l'invio ID: ${submissionId}. Stato: ${deleteResponse.status}`);
                             }
-                        });
-
-                        await Promise.all(deletePromises);
-
+                        }
                         // Check if there are more submissions
                         hasMore = data.currentPage < data.totalPages;
                         page++;
