@@ -190,93 +190,81 @@
             logBox.scrollTop = logBox.scrollHeight;
         }
 
-        // Function to retrieve all forms
-        async function retrieveForms() {
-            const apiKey = document.getElementById('apiKey').value.trim();
-            if (!apiKey) {
-                alert('Per favore inserisci la tua Chiave API JotForm.');
-                return;
-            }
+		// Function to retrieve all forms
+		async function retrieveForms() {
+			const apiKey = document.getElementById('apiKey').value.trim();
+			if (!apiKey) {
+				alert('Per favore inserisci la tua Chiave API JotForm.');
+				return;
+			}
 
-            logMessage('Recupero dei moduli...');
-            try {
-                const response = await fetch(`${BASE_URL}/user/forms?apiKey=${apiKey}`);
-                if (!response.ok) {
-                    throw new Error(`Errore HTTP! Stato: ${response.status}`);
-                }
-                const data = await response.json();
-
-                if (!data.content) {
-                    logMessage('Struttura di risposta inaspettata durante il recupero dei moduli.');
-                    return;
-                }
-
-                const forms = data.content;
-
-                // Map to store new form data
-                const newFormDataMap = new Map();
-
-                // Process each form
-                for (let [index, form] of forms.entries()) {
-                    const formTitle = form.title || 'Senza Titolo';
-                    const formId = form.id || 'N/A';
-                    const formStatus = form.status || 'ATTIVATO';
-                    const isActive = formStatus.toUpperCase() === 'ENABLED' || formStatus.toUpperCase() === 'ATTIVATO';
-
-                    logMessage(`Recupero del conteggio degli invii per il modulo ${index + 1}/${forms.length}: '${formTitle}' (ID: ${formId})`);
-                    const submissionCount = await getSubmissionCount(formId, apiKey);
-                    const lastSubmissionDate = await getLastSubmissionDate(formId, apiKey);
-
-                    // Store form data
-                    newFormDataMap.set(formId, {
-                        formTitle,
-                        formId,
-                        formStatus,
-                        isActive,
-                        submissionCount,
-                        lastSubmissionDate
-                    });
-                }
-
-                // Update the table with new data
-                updateTable(newFormDataMap);
-
-                // Update the formDataMap with new data
-                formDataMap = newFormDataMap;
-
-                logMessage(`Recuperati ${forms.length} moduli.`);
-
-                // Apply the current sort after refreshing the table
-                if (currentSortColumn) {
-                    applyCurrentSort();
-                    updateSortArrows();
-                } else {
-                    updateSortArrows();
-                }
-            } catch (error) {
-                logMessage(`Errore nel recupero dei moduli: ${error.message}`);
-                console.error(error);
-            } finally {
-                resetProgressBarTimer();
-            }
-        }
-
-        // Function to get submission count for a form
-		async function getSubmissionCount(formId, apiKey) {
+			logMessage('Recupero dei moduli...');
 			try {
-				const response = await fetch(`${BASE_URL}/form/${formId}/submissions?apiKey=${apiKey}&limit=0`);
-				if (!response.ok) throw new Error(`Errore HTTP! Stato: ${response.status}`);
+				const response = await fetch(`${BASE_URL}/user/forms?apiKey=${apiKey}`);
+				if (!response.ok) {
+					throw new Error(`Errore HTTP! Stato: ${response.status}`);
+				}
 				const data = await response.json();
-				if (data.total !== undefined) {
-					return data.total;
+
+				if (!data.content) {
+					logMessage('Struttura di risposta inaspettata durante il recupero dei moduli.');
+					return;
+				}
+
+				const forms = data.content;
+
+				// Map to store new form data
+				const newFormDataMap = new Map();
+
+				// Process each form
+				for (let [index, form] of forms.entries()) {
+					const formTitle = form.title || 'Senza Titolo';
+					const formId = form.id || 'N/A';
+					const formStatus = form.status || 'ATTIVATO';
+					const isActive = formStatus.toUpperCase() === 'ENABLED' || formStatus.toUpperCase() === 'ATTIVATO';
+
+					// Extract submission count directly from the form data
+					const submissionCount = form.count && form.count.total ? form.count.total : 0;
+
+					logMessage(`Modulo ${index + 1}/${forms.length}: '${formTitle}' (ID: ${formId}), Invii: ${submissionCount}`);
+
+					// Fetch the last submission date if needed
+					const lastSubmissionDate = await getLastSubmissionDate(formId, apiKey);
+
+					// Store form data
+					newFormDataMap.set(formId, {
+						formTitle,
+						formId,
+						formStatus,
+						isActive,
+						submissionCount,
+						lastSubmissionDate
+					});
+				}
+
+				// Update the table with new data
+				updateTable(newFormDataMap);
+
+				// Update the formDataMap with new data
+				formDataMap = newFormDataMap;
+
+				logMessage(`Recuperati ${forms.length} moduli.`);
+
+				// Apply the current sort after refreshing the table
+				if (currentSortColumn) {
+					applyCurrentSort();
+					updateSortArrows();
 				} else {
-					return 0;
+					updateSortArrows();
 				}
 			} catch (error) {
-				logMessage(`Errore nel recuperare il conteggio degli invii per il modulo ${formId}: ${error.message}`);
-				return 0;
+				logMessage(`Errore nel recupero dei moduli: ${error.message}`);
+				console.error(error);
+			} finally {
+				resetProgressBarTimer();
 			}
 		}
+
 
 		
 
