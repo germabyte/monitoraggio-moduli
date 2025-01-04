@@ -2,9 +2,9 @@
 
 Ciao! Ho creato questo strumento per semplificare la gestione degli invii su JotForm. Con "Monitoraggio Moduli", puoi visualizzare, gestire ed eliminare in blocco gli invii dei tuoi moduli JotForm, il tutto senza dover navigare sul sito di JotForm, che può essere lento e complesso da utilizzare, soprattutto se devi gestire numerosi invii.
 
-Il progetto è anche visibile e utilizzabile, in quanto lo sto ospitando pubblicamente su Github Pages a questo link: [Monitoraggio Moduli](https://concordatofacile.github.io/monitoraggio-moduli/).
+Il progetto è disponibile e accessibile pubblicamente tramite **GitHub Pages** al seguente link: [Monitoraggio Moduli](https://concordatofacile.github.io/monitoraggio-moduli/).
 
-**Nota Bene**: questo progetto è pensato per un uso interno da parte di colleghi e clienti (sono un freelance), quindi per accedere al programma è necessaria una password che verrà associata ad una API key di Jotform specifica per l'utente. Se vuoi usare questo programma per i tuoi scopi, dovrai modificare il codice HTML per rimuovere la richiesta di autenticazione.
+**Nota Bene**: questo strumento è stato progettato per un uso interno, destinato ai miei colleghi e clienti. L'accesso al programma richiede una password, che sarà associata a una API key di JotForm specifica per ciascun utente. Se desideri utilizzare questo programma per i tuoi scopi personali, sarà necessario modificare il codice HTML per rimuovere la richiesta di autenticazione.
 
 ## A Cosa Serve?
 
