@@ -11,7 +11,7 @@ Il progetto è disponibile e accessibile pubblicamente tramite **GitHub Pages** 
 Questo programma ti permette di:
 
 -   **Visualizzare tutti i tuoi moduli JotForm**: Ottieni un elenco chiaro e ordinato di tutti i tuoi moduli.
--   **Controllare lo stato degli invii**: Vedi quanti invii ha ricevuto ogni modulo e quando è stato l'ultimo invio, convertendo gli orari da ET a CET.
+-   **Controllare lo stato degli invii**: Vedi quanti invii ha ricevuto ogni modulo e quando è avvenuto l'ultimo invio.
 -   **Eliminare in blocco gli invii**: Puoi selezionare uno o più moduli ed eliminare tutti i loro invii con un solo click. Questo è particolarmente utile per eliminare i vecchi invii e mantenere puliti i tuoi dati.
 -   **Aggiornamenti Automatici**: Il programma si aggiorna in automatico per mostrarti sempre i dati più recenti.
 
