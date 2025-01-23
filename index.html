@@ -2,6 +2,7 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1"> <!-- Added viewport meta tag for mobile responsiveness -->
     <title>Monitoraggio Moduli</title>
     <!-- Bootstrap CSS for styling -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -9,18 +10,23 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css">
     <style>
         body {
-            padding: 20px;
+            padding: 15px; /* Reduced padding for smaller screens */
         }
         #logBox {
-            height: 200px;
+            height: 150px; /* Reduced height for smaller screens */
             overflow-y: scroll;
             background-color: #f8f9fa;
             padding: 10px;
             border: 1px solid #ced4da;
             border-radius: .25rem;
+            font-size: 0.9rem; /* Slightly smaller font in log box for mobile */
         }
         th {
             cursor: pointer;
+            font-size: 0.95rem; /* Slightly smaller font in table headers for mobile */
+        }
+        td {
+            font-size: 0.9rem; /* Slightly smaller font in table cells for mobile */
         }
         .checked {
             color: green;
@@ -38,23 +44,41 @@
         .sort-arrow {
             margin-left: 5px;
         }
-        /* Responsive adjustments */
-        @media (max-width: 576px) {
+        /* Responsive adjustments - Adjusted breakpoints and styles for better mobile experience */
+        @media (max-width: 768px) { /* Adjusted breakpoint to medium devices */
             body {
                 padding: 10px;
             }
+            h1 {
+                font-size: 2rem; /* Slightly smaller main heading on mobile */
+                margin-bottom: 1.5rem;
+            }
             #logBox {
-                height: 150px;
+                height: 120px; /* Further reduced height for smaller screens */
+                font-size: 0.85rem; /* Even smaller font in log box for very small screens */
             }
             .btn {
-                width: 100%;
-                margin-bottom: 10px;
+                width: 100%; /* Full width buttons on smaller screens */
+                margin-bottom: 8px; /* Slightly reduced margin for buttons */
+                font-size: 0.95rem; /* Slightly smaller button text for mobile */
             }
             .progress {
-                height: 20px;
+                height: 15px; /* Reduced progress bar height for mobile */
             }
             #refreshCountdown {
-                font-size: 0.9rem;
+                font-size: 0.85rem; /* Even smaller countdown text for very small screens */
+            }
+            .table-responsive { /* Ensure table is always responsive on smaller screens */
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+            }
+            th, td {
+                padding: 0.5rem 0.5rem; /* Reduced padding in table cells for mobile */
+                white-space: nowrap; /* Prevent text wrapping in table cells to maintain layout */
+                font-size: 0.85rem; /* Even smaller font in table cells for very small screens */
+            }
+            th {
+                font-size: 0.9rem; /* Slightly larger font in table headers than cells */
             }
         }
         /* Add transition for table rows */
@@ -69,7 +93,7 @@
 <body>
     <div class="container">
         <h1 class="mb-4">Monitoraggio Moduli</h1>
-        
+
         <!-- API Key Input -->
         <div id="mainApp">
             <div class="mb-3">
@@ -77,13 +101,13 @@
                 <input type="password" class="form-control" id="apiKey" placeholder="Inserisci la tua Chiave API JotForm">
                 <div class="form-text">La tua chiave API viene utilizzata per accedere ai tuoi moduli e invii JotForm.</div>
             </div>
-            
+
             <!-- Buttons -->
-            <div class="mb-3 d-flex flex-wrap">
-                <button class="btn btn-primary me-2 mb-2" id="retrieveFormsBtn">Recupera Moduli</button>
-                <button class="btn btn-danger mb-2" id="deleteSubmissionsBtn">Elimina Invii Selezionati</button>
+            <div class="mb-3 d-grid gap-2 d-md-flex justify-content-md-start"> <!-- Using d-grid and gap for better button spacing on mobile -->
+                <button class="btn btn-primary me-md-2" id="retrieveFormsBtn">Recupera Moduli</button>
+                <button class="btn btn-danger" id="deleteSubmissionsBtn">Elimina Invii Selezionati</button>
             </div>
-            
+
             <!-- Progress Bar -->
             <div class="mb-3">
                 <label for="refreshProgress" class="form-label">Prossimo aggiornamento tra:</label>
@@ -92,18 +116,18 @@
                 </div>
                 <small id="refreshCountdown" class="form-text text-muted">60 secondi</small>
             </div>
-            
+
             <!-- Forms Table -->
             <div class="table-responsive">
                 <table class="table table-striped table-hover table-bordered align-middle" id="formsTable">
                     <thead>
                         <tr>
-                            <th data-column="select" class="text-center">Seleziona</th>
+                            <th data-column="select" class="text-center" style="width: 60px;">Seleziona</th> <!-- Fixed width for select column -->
                             <th data-column="title">Titolo <span class="sort-arrow"></span></th>
-                            <th data-column="id">ID <span class="sort-arrow"></span></th>
-                            <th data-column="status">Stato <span class="sort-arrow"></span></th>
-                            <th data-column="submissions" class="text-end">Invii <span class="sort-arrow"></span></th>
-                            <th data-column="lastSubmission" class="text-end">Ultimo Invio <span class="sort-arrow"></span></th>
+                            <th data-column="id" style="width: 150px;">ID <span class="sort-arrow"></span></th> <!-- Fixed width for ID column -->
+                            <th data-column="status" style="width: 100px;">Stato <span class="sort-arrow"></span></th> <!-- Fixed width for Status column -->
+                            <th data-column="submissions" class="text-end" style="width: 80px;">Invii <span class="sort-arrow"></span></th> <!-- Fixed width for Submissions column -->
+                            <th data-column="lastSubmission" class="text-end" style="width: 180px;">Ultimo Invio <span class="sort-arrow"></span></th> <!-- Fixed width for Last Submission column -->
                         </tr>
                     </thead>
                     <tbody>
@@ -111,7 +135,7 @@
                     </tbody>
                 </table>
             </div>
-            
+
             <!-- Log Box -->
             <div class="mt-4">
                 <h5>Registro:</h5>
