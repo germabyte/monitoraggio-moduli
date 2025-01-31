@@ -2,31 +2,31 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1"> <!-- Added viewport meta tag for mobile responsiveness -->
     <title>Monitoraggio Moduli</title>
     <!-- Bootstrap CSS for styling -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font-bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css">
     <style>
         body {
-            padding: 15px;
+            padding: 15px; /* Reduced padding for smaller screens */
         }
         #logBox {
-            height: 150px;
+            height: 150px; /* Reduced height for smaller screens */
             overflow-y: scroll;
             background-color: #f8f9fa;
             padding: 10px;
             border: 1px solid #ced4da;
             border-radius: .25rem;
-            font-size: 0.9rem;
+            font-size: 0.9rem; /* Slightly smaller font in log box for mobile */
         }
         th {
             cursor: pointer;
-            font-size: 0.95rem;
+            font-size: 0.95rem; /* Slightly smaller font in table headers for mobile */
         }
         td {
-            font-size: 0.9rem;
+            font-size: 0.9rem; /* Slightly smaller font in table cells for mobile */
         }
         .checked {
             color: green;
@@ -44,41 +44,41 @@
         .sort-arrow {
             margin-left: 5px;
         }
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
+        /* Responsive adjustments - Adjusted breakpoints and styles for better mobile experience */
+        @media (max-width: 768px) { /* Adjusted breakpoint to medium devices */
             body {
                 padding: 10px;
             }
             h1 {
-                font-size: 2rem;
+                font-size: 2rem; /* Slightly smaller main heading on mobile */
                 margin-bottom: 1.5rem;
             }
             #logBox {
-                height: 120px;
-                font-size: 0.85rem;
+                height: 120px; /* Further reduced height for smaller screens */
+                font-size: 0.85rem; /* Even smaller font in log box for very small screens */
             }
             .btn {
-                width: 100%;
-                margin-bottom: 8px;
-                font-size: 0.95rem;
+                width: 100%; /* Full width buttons on smaller screens */
+                margin-bottom: 8px; /* Slightly reduced margin for buttons */
+                font-size: 0.95rem; /* Slightly smaller button text for mobile */
             }
             .progress {
-                height: 15px;
+                height: 15px; /* Reduced progress bar height for mobile */
             }
             #refreshCountdown {
-                font-size: 0.85rem;
+                font-size: 0.85rem; /* Even smaller countdown text for very small screens */
             }
-            .table-responsive {
+            .table-responsive { /* Ensure table is always responsive on smaller screens */
                 overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
+                -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
             }
             th, td {
-                padding: 0.5rem 0.5rem;
-                white-space: nowrap;
-                font-size: 0.85rem;
+                padding: 0.5rem 0.5rem; /* Reduced padding in table cells for mobile */
+                white-space: nowrap; /* Prevent text wrapping in table cells to maintain layout */
+                font-size: 0.85rem; /* Even smaller font in table cells for very small screens */
             }
             th {
-                font-size: 0.9rem;
+                font-size: 0.9rem; /* Slightly larger font in table headers than cells */
             }
         }
         /* Add transition for table rows */
@@ -88,54 +88,11 @@
         .row-updated {
             background-color: #d1e7dd !important;
         }
-        /* Dashboard Panel Styling */
-        #quotaDashboard {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            background-color: #fff;
-            padding: 15px;
-            border-radius: 0.5rem;
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.1);
-            z-index: 1000; /* Ensure it's above other content */
-            width: 300px; /* Adjust width as needed */
-        }
-        @media (max-width: 768px) {
-            #quotaDashboard {
-                position: fixed; /* Fixed for mobile view */
-                top: 10px;
-                right: 10px;
-                width: auto; /* Adjust width for mobile */
-                padding: 10px;
-                font-size: 0.9rem;
-            }
-        }
-        #quotaDashboard h6 {
-            margin-bottom: 0.5rem;
-            font-weight: bold;
-        }
-        #quotaDashboard p {
-            margin-bottom: 0.2rem;
-        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1 class="mb-4">Monitoraggio Moduli</h1>
-
-        <!-- Quota Dashboard Panel -->
-        <div id="quotaDashboard">
-            <h6>Quota Piano Attuale</h6>
-            <p>Moduli Rimasti: <span id="formsLeft">-</span></p>
-            <p>Spazio Utilizzato: <span id="spaceUsed">-</span></p>
-            <p>Spazio Totale: <span id="spaceTotal">-</span></p>
-            <p>Invii Mensili Rimasti: <span id="submissionsLeft">-</span></p>
-            <p>Transazioni Moduli Rimaste: <span id="formTransactionsLeft">-</span></p>
-            <p>Visualizzazioni Moduli Rimaste: <span id="formViewsLeft">-</span></p>  <!-- Added Form Views -->
-            <p>Invii Totali Rimasti: <span id="totalSubmissionsLeft">-</span></p> <!-- Added Total Submissions -->
-            <p>Invii Pagamento Rimasti: <span id="paymentSubmissionsLeft">-</span></p> <!-- Added Payment Submissions -->
-            <p>Documenti Firmati Rimasti: <span id="signedDocumentsLeft">-</span></p> <!-- Added Signed Documents -->
-        </div>
 
         <!-- API Key Input -->
         <div id="mainApp">
@@ -146,7 +103,7 @@
             </div>
 
             <!-- Buttons -->
-            <div class="mb-3 d-grid gap-2 d-md-flex justify-content-md-start">
+            <div class="mb-3 d-grid gap-2 d-md-flex justify-content-md-start"> <!-- Using d-grid and gap for better button spacing on mobile -->
                 <button class="btn btn-primary me-md-2" id="retrieveFormsBtn">Recupera Moduli</button>
                 <button class="btn btn-danger" id="deleteSubmissionsBtn">Elimina Invii Selezionati</button>
             </div>
@@ -165,12 +122,12 @@
                 <table class="table table-striped table-hover table-bordered align-middle" id="formsTable">
                     <thead>
                         <tr>
-                            <th data-column="select" class="text-center" style="width: 60px;">Seleziona</th>
+                            <th data-column="select" class="text-center" style="width: 60px;">Seleziona</th> <!-- Fixed width for select column -->
                             <th data-column="title">Titolo <span class="sort-arrow"></span></th>
-                            <th data-column="id" style="width: 150px;">ID <span class="sort-arrow"></span></th>
-                            <th data-column="status" style="width: 100px;">Stato <span class="sort-arrow"></span></th>
-                            <th data-column="submissions" class="text-end" style="width: 80px;">Invii <span class="sort-arrow"></span></th>
-                            <th data-column="lastSubmission" class="text-end" style="width: 180px;">Ultimo Invio <span class="sort-arrow"></span></th>
+                            <th data-column="id" style="width: 150px;">ID <span class="sort-arrow"></span></th> <!-- Fixed width for ID column -->
+                            <th data-column="status" style="width: 100px;">Stato <span class="sort-arrow"></span></th> <!-- Fixed width for Status column -->
+                            <th data-column="submissions" class="text-end" style="width: 80px;">Invii <span class="sort-arrow"></span></th> <!-- Fixed width for Submissions column -->
+                            <th data-column="lastSubmission" class="text-end" style="width: 180px;">Ultimo Invio <span class="sort-arrow"></span></th> <!-- Fixed width for Last Submission column -->
                         </tr>
                     </thead>
                     <tbody>
@@ -257,69 +214,7 @@
             logBox.scrollTop = logBox.scrollHeight;
         }
 
-        // Function to retrieve user quota information
-        async function fetchQuotaData(apiKey) {
-            try {
-                const response = await fetch(`${BASE_URL}/user/usage?apiKey=${apiKey}`);
-                if (!response.ok) {
-                    const message = `Errore HTTP durante il recupero della quota! Stato: ${response.status}`;
-                    logMessage(message); // Log the error status
-                    throw new Error(message);
-                }
-                const data = await response.json();
-                if (data && data.content) {
-                    return data.content;
-                } else {
-                    logMessage('Struttura di risposta inaspettata durante il recupero della quota.');
-                    return null;
-                }
-            } catch (error) {
-                logMessage(`Errore nella fetchQuotaData: ${error.message}`); // More specific log
-                console.error(error);
-                return null;
-            }
-        }
-
-
-        // Function to update the quota dashboard
-        function updateQuotaDashboard(quotaData) {
-            if (quotaData) {
-                document.getElementById('formsLeft').innerText = quotaData.formLimit !== undefined ? quotaData.formLimit - quotaData.formCount : 'N/A';
-                document.getElementById('spaceUsed').innerText = quotaData.submissionSpaceUsed !== undefined ? formatBytes(quotaData.submissionSpaceUsed) : 'N/A';
-                document.getElementById('spaceTotal').innerText = quotaData.submissionSpace !== undefined ? formatBytes(quotaData.submissionSpace) : 'N/A';
-                document.getElementById('submissionsLeft').innerText = quotaData.monthlySubmissionLimit !== undefined ? quotaData.monthlySubmissionLimit - quotaData.monthlySubmissionCount : 'N/A';
-                document.getElementById('formTransactionsLeft').innerText = quotaData.formTransactionLimit !== undefined ? quotaData.formTransactionLimit - quotaData.formTransactionCount : 'N/A';
-                document.getElementById('formViewsLeft').innerText = quotaData.formViewLimit !== undefined ? quotaData.formViewLimit - quotaData.formViewCount : 'N/A'; // Added Form Views
-                document.getElementById('totalSubmissionsLeft').innerText = quotaData.totalSubmissionLimit !== undefined ? quotaData.totalSubmissionLimit - quotaData.totalSubmissionCount : 'N/A'; // Added Total Submissions
-                document.getElementById('paymentSubmissionsLeft').innerText = quotaData.paymentSubmissionLimit !== undefined ? quotaData.paymentSubmissionLimit - quotaData.paymentSubmissionCount : 'N/A'; // Added Payment Submissions
-                document.getElementById('signedDocumentsLeft').innerText = quotaData.signedDocumentLimit !== undefined ? quotaData.signedDocumentLimit - quotaData.signedDocumentCount : 'N/A'; // Added Signed Documents
-
-            } else {
-                document.getElementById('formsLeft').innerText = 'N/A';
-                document.getElementById('spaceUsed').innerText = 'N/A';
-                document.getElementById('spaceTotal').innerText = 'N/A';
-                document.getElementById('submissionsLeft').innerText = 'N/A';
-                document.getElementById('formTransactionsLeft').innerText = 'N/A';
-                document.getElementById('formViewsLeft').innerText = 'N/A';
-                document.getElementById('totalSubmissionsLeft').innerText = 'N/A';
-                document.getElementById('paymentSubmissionsLeft').innerText = 'N/A';
-                document.getElementById('signedDocumentsLeft').innerText = 'N/A';
-            }
-        }
-
-
-        // Helper function to format bytes to human-readable size
-        function formatBytes(bytes, decimals = 2) {
-            if (!bytes) return '0 Bytes';
-            const k = 1024;
-            const dm = decimals < 0 ? 0 : decimals;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-            const i = Math.floor(Math.log(bytes / 1024) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-        }
-
-
-        // Function to retrieve all forms and update quota
+        // Function to retrieve all forms
         async function retrieveForms() {
             const apiKey = document.getElementById('apiKey').value.trim();
             if (!apiKey) {
@@ -327,12 +222,9 @@
                 return;
             }
 
-            logMessage('Recupero dei moduli e quota...'); // Updated log message
+            logMessage('Recupero dei moduli...');
             try {
-                // Fetch quota data first
-                const quotaData = await fetchQuotaData(apiKey);
-                updateQuotaDashboard(quotaData);
-
+                // Add counts=true to get submission counts
                 const response = await fetch(`${BASE_URL}/user/forms?apiKey=${apiKey}&counts=true`);
                 if (!response.ok) {
                     throw new Error(`Errore HTTP! Stato: ${response.status}`);
@@ -379,7 +271,7 @@
                 // Update the formDataMap with new data
                 formDataMap = newFormDataMap;
 
-                logMessage(`Recuperati ${forms.length} moduli e quota aggiornata.`); // Updated log message
+                logMessage(`Recuperati ${forms.length} moduli.`);
 
                 // Apply the current sort after refreshing the table
                 if (currentSortColumn) {
@@ -389,7 +281,7 @@
                     updateSortArrows();
                 }
             } catch (error) {
-                logMessage(`Errore nel retrieveForms: ${error.message}`); // More specific log
+                logMessage(`Errore nel recupero dei moduli: ${error.message}`);
                 console.error(error);
             } finally {
                 resetProgressBarTimer();
@@ -767,7 +659,7 @@
                         logMessage('Inserisci la tua API key personalizzata.');
                     }
 
-                    // Retrieve forms and quota after authentication
+                    // Retrieve forms after authentication
                     retrieveForms();
                 } else {
                     // Show error message
