@@ -1,9 +1,94 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-    <!-- ... head content ... -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1"> <!-- Added viewport meta tag for mobile responsiveness -->
     <title>Monitoraggio Moduli</title>
-    <!-- ... CSS links and styles ... -->
+    <!-- Bootstrap CSS for styling -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            padding: 15px; /* Reduced padding for smaller screens */
+        }
+        #logBox {
+            height: 150px; /* Reduced height for smaller screens */
+            overflow-y: scroll;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: .25rem;
+            font-size: 0.9rem; /* Slightly smaller font in log box for mobile */
+        }
+        th {
+            cursor: pointer;
+            font-size: 0.95rem; /* Slightly smaller font in table headers for mobile */
+        }
+        td {
+            font-size: 0.9rem; /* Slightly smaller font in table cells for mobile */
+        }
+        .checked {
+            color: green;
+            font-weight: bold;
+        }
+        .unchecked {
+            color: grey;
+            font-weight: bold;
+        }
+        /* Hide the main application initially */
+        #mainApp {
+            display: none;
+        }
+        /* Sort arrow styles */
+        .sort-arrow {
+            margin-left: 5px;
+        }
+        /* Responsive adjustments - Adjusted breakpoints and styles for better mobile experience */
+        @media (max-width: 768px) { /* Adjusted breakpoint to medium devices */
+            body {
+                padding: 10px;
+            }
+            h1 {
+                font-size: 2rem; /* Slightly smaller main heading on mobile */
+                margin-bottom: 1.5rem;
+            }
+            #logBox {
+                height: 120px; /* Further reduced height for smaller screens */
+                font-size: 0.85rem; /* Even smaller font in log box for very small screens */
+            }
+            .btn {
+                width: 100%; /* Full width buttons on smaller screens */
+                margin-bottom: 8px; /* Slightly reduced margin for buttons */
+                font-size: 0.95rem; /* Slightly smaller button text for mobile */
+            }
+            .progress {
+                height: 15px; /* Reduced progress bar height for mobile */
+            }
+            #refreshCountdown {
+                font-size: 0.85rem; /* Even smaller countdown text for very small screens */
+            }
+            .table-responsive { /* Ensure table is always responsive on smaller screens */
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+            }
+            th, td {
+                padding: 0.5rem 0.5rem; /* Reduced padding in table cells for mobile */
+                white-space: nowrap; /* Prevent text wrapping in table cells to maintain layout */
+                font-size: 0.85rem; /* Even smaller font in table cells for very small screens */
+            }
+            th {
+                font-size: 0.9rem; /* Slightly larger font in table headers than cells */
+            }
+        }
+        /* Add transition for table rows */
+        #formsTable tbody tr {
+            transition: background-color 0.3s ease;
+        }
+        .row-updated {
+            background-color: #d1e7dd !important;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -13,12 +98,12 @@
         <div id="mainApp">
             <div class="mb-3">
                 <label for="apiKey" class="form-label">Chiave API JotForm:</label>
-                <input type="password" class="form-control" id="apiKey" placeholder="Inserisci la tua Chiave API JotForm" readonly>
+                <input type="password" class="form-control" id="apiKey" placeholder="Inserisci la tua Chiave API JotForm">
                 <div class="form-text">La tua chiave API viene utilizzata per accedere ai tuoi moduli e invii JotForm.</div>
             </div>
 
             <!-- Buttons -->
-            <div class="mb-3 d-grid gap-2 d-md-flex justify-content-md-start">
+            <div class="mb-3 d-grid gap-2 d-md-flex justify-content-md-start"> <!-- Using d-grid and gap for better button spacing on mobile -->
                 <button class="btn btn-primary me-md-2" id="retrieveFormsBtn">Recupera Moduli</button>
                 <button class="btn btn-danger" id="deleteSubmissionsBtn">Elimina Invii Selezionati</button>
             </div>
@@ -37,12 +122,12 @@
                 <table class="table table-striped table-hover table-bordered align-middle" id="formsTable">
                     <thead>
                         <tr>
-                            <th data-column="select" class="text-center" style="width: 60px;">Seleziona</th>
+                            <th data-column="select" class="text-center" style="width: 60px;">Seleziona</th> <!-- Fixed width for select column -->
                             <th data-column="title">Titolo <span class="sort-arrow"></span></th>
-                            <th data-column="id" style="width: 150px;">ID <span class="sort-arrow"></span></th>
-                            <th data-column="status" style="width: 100px;">Stato <span class="sort-arrow"></span></th>
-                            <th data-column="submissions" class="text-end" style="width: 80px;">Invii <span class="sort-arrow"></span></th>
-                            <th data-column="lastSubmission" class="text-end" style="width: 180px;">Ultimo Invio <span class="sort-arrow"></span></th>
+                            <th data-column="id" style="width: 150px;">ID <span class="sort-arrow"></span></th> <!-- Fixed width for ID column -->
+                            <th data-column="status" style="width: 100px;">Stato <span class="sort-arrow"></span></th> <!-- Fixed width for Status column -->
+                            <th data-column="submissions" class="text-end" style="width: 80px;">Invii <span class="sort-arrow"></span></th> <!-- Fixed width for Submissions column -->
+                            <th data-column="lastSubmission" class="text-end" style="width: 180px;">Ultimo Invio <span class="sort-arrow"></span></th> <!-- Fixed width for Last Submission column -->
                         </tr>
                     </thead>
                     <tbody>
@@ -91,13 +176,13 @@
 
         // Global variables to track sort state
         let currentSortColumn = null;
-        let currentSortOrder = 'asc';
+        let currentSortOrder = 'asc'; // 'asc' or 'desc'
 
         // Global variable for the authentication modal instance
         let authModalInstance;
 
         // Progress Bar Variables
-        const refreshInterval = 60;
+        const refreshInterval = 60; // seconds
         let timeLeft = refreshInterval;
         let progressBarTimer;
 
@@ -106,9 +191,6 @@
 
         // Store form data to compare during refresh
         let formDataMap = new Map();
-
-        // Global variable to store allowedFormId for restricted users, null for unrestricted
-        let allowedFormId = null;
 
         // Event Listeners
         document.getElementById('retrieveFormsBtn').addEventListener('click', () => {
@@ -132,7 +214,7 @@
             logBox.scrollTop = logBox.scrollHeight;
         }
 
-        // Function to retrieve all forms (modified to handle form restriction)
+        // Function to retrieve all forms
         async function retrieveForms() {
             const apiKey = document.getElementById('apiKey').value.trim();
             if (!apiKey) {
@@ -154,19 +236,7 @@
                     return;
                 }
 
-                let forms = data.content;
-
-                // Filter forms if allowedFormId is set
-                if (allowedFormId) {
-                    forms = forms.filter(form => form.id === allowedFormId);
-                    if (forms.length === 0) {
-                        logMessage(`Nessun modulo trovato con ID ${allowedFormId}.`);
-                        updateTable(new Map()); // Clear table if no form found
-                        return;
-                    } else {
-                        logMessage(`Utente ristretto al modulo ID ${allowedFormId}.`);
-                    }
-                }
+                const forms = data.content;
 
                 // Map to store new form data
                 const newFormDataMap = new Map();
@@ -210,12 +280,6 @@
                 } else {
                     updateSortArrows();
                 }
-
-                // Disable "Retrieve Forms" button for restricted users
-                if (allowedFormId) {
-                    document.getElementById('retrieveFormsBtn').disabled = true;
-                }
-
             } catch (error) {
                 logMessage(`Errore nel recupero dei moduli: ${error.message}`);
                 console.error(error);
@@ -225,29 +289,173 @@
         }
 
 
-        // Function to get last submission date for a form (no changes)
-		async function getLastSubmissionDate(formId, apiKey) {
-            // ... (same as before) ...
-        }
 
-		// Helper function to determine if a date is in Daylight Saving Time in ET (no changes)
+        // Function to get last submission date for a form
+		async function getLastSubmissionDate(formId, apiKey) {
+			try {
+				const response = await fetch(`${BASE_URL}/form/${formId}/submissions?apiKey=${apiKey}&limit=1&orderby=created_at&sort=desc`);
+				if (!response.ok) throw new Error(`Errore HTTP! Stato: ${response.status}`);
+				const data = await response.json();
+
+				if (data.content && data.content.length > 0) {
+					const createdAt = data.content[0].created_at; // e.g., '2024-12-03 01:23:09'
+
+					// Determine the UTC offset for Eastern Time (ET) at the date of submission
+					const [datePart, timePart] = createdAt.split(' ');
+					const [year, month, day] = datePart.split('-').map(Number);
+					const [hour, minute, second] = timePart.split(':').map(Number);
+
+					const submissionDate = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+
+					// Determine if the date is in Daylight Saving Time
+					const isDST = isDaylightSavingTimeInET(submissionDate);
+
+					// Adjust the time by adding the ET offset to UTC
+					const etOffset = isDST ? -4 : -5; // UTC offset for ET in hours
+					submissionDate.setUTCHours(submissionDate.getUTCHours() - etOffset);
+
+					// Format the date in Central European Time
+					const options = {
+						timeZone: 'Europe/Rome', // Central European Time zone
+						year: 'numeric', month: '2-digit', day: '2-digit',
+						hour: '2-digit', minute: '2-digit', second: '2-digit',
+					};
+					const formatter = new Intl.DateTimeFormat('it-IT', options);
+
+					return formatter.format(submissionDate);
+				} else {
+					return 'N/A';
+				}
+			} catch (error) {
+				logMessage(`Errore nel recuperare la data dell'ultimo invio per il modulo ${formId}: ${error.message}`);
+				return 'N/A';
+			}
+		}
+
+		// Helper function to determine if a date is in Daylight Saving Time in ET
 		function isDaylightSavingTimeInET(date) {
-            // ... (same as before) ...
+			const year = date.getUTCFullYear();
+
+			// Second Sunday in March at 2:00 AM
+			const dstStart = new Date(Date.UTC(year, 2, 8, 7)); // March 8th at 2:00 AM ET
+			dstStart.setUTCDate(8 + (7 - dstStart.getUTCDay()) % 7);
+
+			// First Sunday in November at 2:00 AM
+			const dstEnd = new Date(Date.UTC(year, 10, 1, 6)); // November 1st at 2:00 AM ET
+			dstEnd.setUTCDate(1 + (7 - dstEnd.getUTCDay()) % 7);
+
+			return date >= dstStart && date < dstEnd;
 		}
 
 
-        // Function to update the table with new form data (no significant changes)
+        // Function to update the table with new form data
         function updateTable(newFormDataMap) {
-            // ... (same as before, but ensure checkbox disabling logic remains) ...
-             newFormDataMap.forEach((formData, formId) => {
-                // ... existing logic ...
-                    // Modified line: Disable checkbox if submissionCount is 0 OR if it's NOT the allowed form for restricted users
-                    checkbox.disabled = formData.submissionCount === 0 || (allowedFormId && formId !== allowedFormId);
-                // ... rest of the logic ...
+            const tbody = document.querySelector('#formsTable tbody');
+            const existingRows = tbody.querySelectorAll('tr');
+
+            // Map existing rows by formId for quick lookup
+            const existingRowsMap = new Map();
+            existingRows.forEach(row => {
+                const formId = row.getAttribute('data-form-id');
+                existingRowsMap.set(formId, row);
+            });
+
+            // Keep track of rows that have been updated or added
+            const processedFormIds = new Set();
+
+            newFormDataMap.forEach((formData, formId) => {
+                const existingRow = existingRowsMap.get(formId);
+                if (existingRow) {
+                    // Update existing row if data has changed
+                    const cells = existingRow.children;
+
+                    const submissionCountCell = cells[4];
+                    const lastSubmissionCell = cells[5];
+
+                    const prevSubmissionCount = submissionCountCell.innerText;
+                    const prevLastSubmission = lastSubmissionCell.innerText;
+
+                    if (prevSubmissionCount != formData.submissionCount || prevLastSubmission != formData.lastSubmissionDate) {
+                        submissionCountCell.innerText = formData.submissionCount;
+                        lastSubmissionCell.innerText = formData.lastSubmissionDate;
+
+                        // Highlight updated row
+                        existingRow.classList.add('row-updated');
+                        setTimeout(() => {
+                            existingRow.classList.remove('row-updated');
+                        }, 1000);
+                    }
+
+                    // Update checkbox state
+                    const checkbox = existingRow.querySelector('.form-select-checkbox');
+                    // Modified line: Disable checkbox if submissionCount is 0
+                    checkbox.disabled = formData.submissionCount === 0;
+
+                    // Update status badge
+                    const statusCell = cells[3];
+                    statusCell.innerHTML = formData.isActive ? '<span class="badge bg-success">Attivato</span>' : '<span class="badge bg-secondary">Disattivato</span>';
+
+                    // Update row class for inactive forms
+                    if (!formData.isActive) {
+                        existingRow.classList.add('table-secondary');
+                    } else {
+                        existingRow.classList.remove('table-secondary');
+                    }
+
+                    processedFormIds.add(formId);
+                } else {
+                    // Add new row
+                    const row = document.createElement('tr');
+                    row.setAttribute('data-form-id', formId);
+                    row.innerHTML = `
+                        <td class="text-center">
+                            <input type="checkbox" class="form-select-checkbox" data-form-id="${formId}" ${formData.submissionCount > 0 ? '' : 'disabled'} ${selectedFormIds.has(formId) ? 'checked' : ''}>
+                        </td>
+                        <td>${formData.formTitle}</td>
+                        <td>${formData.formId}</td>
+                        <td>${formData.isActive ? '<span class="badge bg-success">Attivato</span>' : '<span class="badge bg-secondary">Disattivato</span>'}</td>
+                        <td class="text-end">${formData.submissionCount}</td>
+                        <td class="text-end">${formData.lastSubmissionDate}</td>
+                    `;
+                    if (!formData.isActive) {
+                        row.classList.add('table-secondary');
+                    }
+                    tbody.appendChild(row);
+
+                    // Add event listener to update selectedFormIds when the checkbox is changed
+                    const checkbox = row.querySelector('.form-select-checkbox');
+                    if (checkbox) {
+                        checkbox.addEventListener('change', function() {
+                            const formId = this.getAttribute('data-form-id');
+                            if (this.checked) {
+                                selectedFormIds.add(formId);
+                            } else {
+                                selectedFormIds.delete(formId);
+                            }
+                        });
+                    }
+
+                    // Highlight new row
+                    row.classList.add('row-updated');
+                    setTimeout(() => {
+                        row.classList.remove('row-updated');
+                    }, 1000);
+
+                    processedFormIds.add(formId);
+                }
+            });
+
+            // Remove rows that are no longer present
+            existingRows.forEach(row => {
+                const formId = row.getAttribute('data-form-id');
+                if (!newFormDataMap.has(formId)) {
+                    tbody.removeChild(row);
+                    selectedFormIds.delete(formId);
+                }
             });
         }
 
-        // Function to delete selected submissions (modified to check form restriction)
+        // Function to delete selected submissions
         async function deleteSelectedSubmissions() {
             const apiKey = document.getElementById('apiKey').value.trim();
             if (!apiKey) {
@@ -261,17 +469,6 @@
                 return;
             }
 
-            // Check form restriction before deletion
-            if (allowedFormId) {
-                for (let checkbox of checkboxes) {
-                    const formId = checkbox.getAttribute('data-form-id');
-                    if (formId !== allowedFormId) {
-                        alert(`Accesso negato. Puoi eliminare invii solo per il modulo ID ${allowedFormId}.`);
-                        return;
-                    }
-                }
-            }
-
             if (!confirm(`Sei sicuro di voler eliminare gli invii per ${checkboxes.length} modulo/i? Questa azione non può essere annullata.`)) {
                 return;
             }
@@ -281,15 +478,15 @@
                 const formTitle = checkbox.closest('tr').children[1].innerText;
                 logMessage(`Eliminazione degli invii per il modulo: ${formTitle} (ID: ${formId})`);
                 await deleteAllSubmissions(formId, apiKey);
-                // Update the table row (same as before)
+                // Update the table row
                 const row = checkbox.closest('tr');
                 row.children[4].innerText = '0';
                 row.children[5].innerText = 'N/A';
                 checkbox.checked = false;
-                checkbox.disabled = true;
-                selectedFormIds.delete(formId);
+                checkbox.disabled = true; // Disable checkbox after deleting submissions
+                selectedFormIds.delete(formId); // Update the selected forms
 
-                // Update formDataMap (same as before)
+                // Update formDataMap
                 if (formDataMap.has(formId)) {
                     const formData = formDataMap.get(formId);
                     formData.submissionCount = 0;
@@ -301,24 +498,127 @@
             logMessage('Processo di eliminazione completato.');
         }
 
-        // Function to delete all submissions for a form (no changes)
+        // Function to delete all submissions for a form
         async function deleteAllSubmissions(formId, apiKey) {
-            // ... (same as before) ...
+            try {
+                let page = 1;
+                const limit = 100; // Adjust as needed
+                let hasMore = true;
+
+                while (hasMore) {
+                    const response = await fetch(`${BASE_URL}/form/${formId}/submissions?apiKey=${apiKey}&limit=${limit}&page=${page}`);
+                    if (!response.ok) throw new Error(`Errore HTTP! Stato: ${response.status}`);
+                    const data = await response.json();
+
+                    if (data.content && data.content.length > 0) {
+                        for (let submission of data.content) {
+                            const submissionId = submission.id;
+                            const deleteResponse = await fetch(`${BASE_URL}/submission/${submissionId}?apiKey=${apiKey}`, {
+                                method: 'DELETE'
+                            });
+                            if (deleteResponse.ok) {
+                                logMessage(`Eliminato invio ID: ${submissionId}`);
+                            } else {
+                                logMessage(`Impossibile eliminare l'invio ID: ${submissionId}. Stato: ${deleteResponse.status}`);
+                            }
+                        }
+                        // Check if there are more submissions
+                        hasMore = data.currentPage < data.totalPages;
+                        page++;
+                    } else {
+                        hasMore = false;
+                    }
+                }
+
+                logMessage(`Tutti gli invii per il modulo ID ${formId} sono stati eliminati.`);
+            } catch (error) {
+                logMessage(`Errore nell'eliminare gli invii per il modulo ID ${formId}: ${error.message}`);
+                console.error(error);
+            }
         }
 
-        // Sorting functions (no changes)
-        function sortTable(column) { /* ... */ }
-        function getColumnIndex(column) { /* ... */ }
-        function applyCurrentSort() { /* ... */ }
-        function updateSortArrows() { /* ... */ }
+        // Function to sort the table based on a column
+        function sortTable(column) {
+            if (!column) return;
 
-        // Password Authentication Logic (modified to handle allowedFormId)
+            if (currentSortColumn === column) {
+                // Toggle sort order if the same column is clicked
+                currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+            } else {
+                // Set to ascending order if a new column is clicked
+                currentSortOrder = 'asc';
+                currentSortColumn = column;
+            }
+
+            applyCurrentSort();
+            updateSortArrows();
+        }
+
+        // Helper function to get column index based on column name
+        function getColumnIndex(column) {
+            const columns = ['select', 'title', 'id', 'status', 'submissions', 'lastSubmission'];
+            return columns.indexOf(column) + 1;
+        }
+
+        // Apply the current sort after refreshing the table
+        function applyCurrentSort() {
+            if (!currentSortColumn) return; // No sort to apply
+
+            const tbody = document.querySelector('#formsTable tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+
+            rows.sort((a, b) => {
+                let aText = a.querySelector(`td:nth-child(${getColumnIndex(currentSortColumn)})`).innerText.trim();
+                let bText = b.querySelector(`td:nth-child(${getColumnIndex(currentSortColumn)})`).innerText.trim();
+
+                // Handle numeric and date sorting
+                if (currentSortColumn === 'submissions') {
+                    aText = parseInt(aText) || 0;
+                    bText = parseInt(bText) || 0;
+                } else if (currentSortColumn === 'lastSubmission') {
+                    aText = new Date(aText).getTime() || 0;
+                    bText = new Date(bText).getTime() || 0;
+                } else {
+                    aText = aText.toLowerCase();
+                    bText = bText.toLowerCase();
+                }
+
+                if (aText < bText) return currentSortOrder === 'asc' ? -1 : 1;
+                if (aText > bText) return currentSortOrder === 'asc' ? 1 : -1;
+                return 0;
+            });
+
+            // Re-append sorted rows
+            rows.forEach(row => tbody.appendChild(row));
+        }
+
+        // Function to update the sort arrows in the table headers
+        function updateSortArrows() {
+            // Remove existing arrows
+            document.querySelectorAll('#formsTable th').forEach(header => {
+                const sortArrow = header.querySelector('.sort-arrow');
+                if (sortArrow) {
+                    sortArrow.innerHTML = '';
+                }
+            });
+
+            // Add arrow to the currently sorted column
+            if (currentSortColumn) {
+                const header = document.querySelector(`#formsTable th[data-column="${currentSortColumn}"]`);
+                const sortArrow = header.querySelector('.sort-arrow');
+                if (sortArrow) {
+                    sortArrow.innerHTML = currentSortOrder === 'asc' ? '<i class="bi bi-caret-up-fill"></i>' : '<i class="bi bi-caret-down-fill"></i>';
+                }
+            }
+        }
+
+        // Password Authentication Logic
         document.getElementById('authForm').addEventListener('submit', async function(event) {
-            event.preventDefault();
+            event.preventDefault(); // Prevent form submission
 
             const userPassword = document.getElementById('userPassword').value.trim();
             const authError = document.getElementById('authError');
-            authError.style.display = 'none';
+            authError.style.display = 'none'; // Hide previous error
 
             if (!userPassword) {
                 authError.textContent = 'Per favore inserisci una password valida.';
@@ -336,47 +636,28 @@
                 const whitelistData = await response.text();
                 const lines = whitelistData.split('\n').map(line => line.trim()).filter(line => line.length > 0);
 
-                let authenticatedUserEntry = null;
+                const userEntries = lines.map(line => {
+                    const [encodedPassword, encodedApiKey] = line.split(',');
+                    const password = atob(encodedPassword);
+                    const apiKey = atob(encodedApiKey);
+                    return { password, apiKey };
+                });
 
-                for (const line of lines) {
-                    const parts = line.split(',');
-                    if (parts.length >= 2) { // Ensure at least password and apikey are present
-                        const encodedPassword = parts[0];
-                        const encodedApiKey = parts[1];
-                        const password = atob(encodedPassword);
-                        const apiKey = atob(encodedApiKey);
-                        let currentAllowedFormId = null; // default unrestricted
+                const userEntry = userEntries.find(entry => entry.password === userPassword);
 
-                        if (parts.length >= 3) {
-                            currentAllowedFormId = parts[2].trim(); // Get the third value as allowedFormId
-                        }
-
-                        if (password === userPassword) {
-                            authenticatedUserEntry = { apiKey: apiKey, allowedFormId: currentAllowedFormId };
-                            break; // Stop searching after finding a match
-                        }
-                    }
-                }
-
-
-                if (authenticatedUserEntry) {
+                if (userEntry) {
                     // Authentication successful
                     authModalInstance.hide();
                     document.getElementById('mainApp').style.display = 'block';
                     logMessage(`Utente autenticato con successo.`);
 
-                    // Set global API Key and allowedFormId
-                    document.getElementById('apiKey').value = authenticatedUserEntry.apiKey;
-                    allowedFormId = authenticatedUserEntry.allowedFormId;
-
-                    if (allowedFormId) {
-                        logMessage(`Utente ristretto al modulo ID: ${allowedFormId}`);
-                        document.getElementById('retrieveFormsBtn').disabled = true; // Disable retrieve button for restricted users
+                    const loadDefaultApiKey = confirm("Vuoi caricare la API key salvata in memoria per la tua utenza?");
+                    if (loadDefaultApiKey) {
+                        document.getElementById('apiKey').value = userEntry.apiKey;
+                        logMessage('API key predefinita caricata.');
                     } else {
-                        logMessage('Utente con accesso a tutti i moduli.');
-                        document.getElementById('retrieveFormsBtn').disabled = false; // Enable retrieve button for unrestricted users
+                        logMessage('Inserisci la tua API key personalizzata.');
                     }
-
 
                     // Retrieve forms after authentication
                     retrieveForms();
@@ -394,11 +675,52 @@
             }
         });
 
-        // Progress Bar Functions (no changes)
-        document.addEventListener('DOMContentLoaded', function() { /* ... */ });
-        function updateProgressBar() { /* ... */ }
-        function startProgressBarTimer() { /* ... */ }
-        function resetProgressBarTimer() { /* ... */ }
+        // Display the authentication modal on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            authModalInstance = new bootstrap.Modal(document.getElementById('authModal'), {
+                backdrop: 'static',
+                keyboard: false
+            });
+            authModalInstance.show();
+
+            // Start the progress bar timer on initial page load
+            startProgressBarTimer();
+        });
+
+        // Progress Bar Functions
+
+        // Function to update the progress bar
+        function updateProgressBar() {
+            const progressBar = document.getElementById('refreshProgressBar');
+            const countdown = document.getElementById('refreshCountdown');
+            const percent = ((refreshInterval - timeLeft) / refreshInterval) * 100;
+            progressBar.style.width = percent + '%';
+            progressBar.setAttribute('aria-valuenow', refreshInterval - timeLeft);
+            countdown.innerText = `${timeLeft} secondi`;
+        }
+
+        // Function to start the progress bar timer
+        function startProgressBarTimer() {
+            timeLeft = refreshInterval;
+            updateProgressBar();
+            clearInterval(progressBarTimer);
+            progressBarTimer = setInterval(() => {
+                timeLeft--;
+                if (timeLeft <= 0) {
+                    retrieveForms();
+                    timeLeft = refreshInterval;
+                }
+                updateProgressBar();
+            }, 1000);
+        }
+
+        // Function to reset the progress bar timer
+        function resetProgressBarTimer() {
+            timeLeft = refreshInterval;
+            updateProgressBar();
+            clearInterval(progressBarTimer);
+            startProgressBarTimer();
+        }
     </script>
 </body>
 </html>
