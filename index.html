@@ -192,6 +192,9 @@
         // Store form data to compare during refresh
         let formDataMap = new Map();
 
+        // Global variable to store authorized form ID if any
+        let authorizedFormId = null;
+
         // Event Listeners
         document.getElementById('retrieveFormsBtn').addEventListener('click', () => {
             retrieveForms();
@@ -236,7 +239,20 @@
                     return;
                 }
 
-                const forms = data.content;
+                let forms = data.content;
+
+                // Filter forms if authorizedFormId is set
+                if (authorizedFormId) {
+                    forms = forms.filter(form => form.id == authorizedFormId);
+                    if (forms.length === 0) {
+                        logMessage(`Nessun modulo trovato con ID ${authorizedFormId} per questo utente.`);
+                        updateTable(new Map()); // Clear the table
+                        return;
+                    } else {
+                        logMessage(`Visualizzazione solo del modulo con ID ${authorizedFormId} per questo utente.`);
+                    }
+                }
+
 
                 // Map to store new form data
                 const newFormDataMap = new Map();
@@ -637,10 +653,13 @@
                 const lines = whitelistData.split('\n').map(line => line.trim()).filter(line => line.length > 0);
 
                 const userEntries = lines.map(line => {
-                    const [encodedPassword, encodedApiKey] = line.split(',');
+                    const parts = line.split(',');
+                    const encodedPassword = parts[0];
+                    const encodedApiKey = parts[1];
+                    const formId = parts[2]; // Might be undefined
                     const password = atob(encodedPassword);
                     const apiKey = atob(encodedApiKey);
-                    return { password, apiKey };
+                    return { password, apiKey, formId }; // Include formId in userEntry
                 });
 
                 const userEntry = userEntries.find(entry => entry.password === userPassword);
@@ -650,6 +669,8 @@
                     authModalInstance.hide();
                     document.getElementById('mainApp').style.display = 'block';
                     logMessage(`Utente autenticato con successo.`);
+
+                    authorizedFormId = userEntry.formId; // Store authorized form ID (can be null or undefined)
 
                     const loadDefaultApiKey = confirm("Vuoi caricare la API key salvata in memoria per la tua utenza?");
                     if (loadDefaultApiKey) {
