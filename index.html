@@ -7,7 +7,7 @@
     <!-- Bootstrap CSS for styling -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font-bootstrap-icons.css">
     <style>
         body {
             padding: 15px;
@@ -131,6 +131,10 @@
             <p>Spazio Totale: <span id="spaceTotal">-</span></p>
             <p>Invii Mensili Rimasti: <span id="submissionsLeft">-</span></p>
             <p>Transazioni Moduli Rimaste: <span id="formTransactionsLeft">-</span></p>
+            <p>Visualizzazioni Moduli Rimaste: <span id="formViewsLeft">-</span></p>  <!-- Added Form Views -->
+            <p>Invii Totali Rimasti: <span id="totalSubmissionsLeft">-</span></p> <!-- Added Total Submissions -->
+            <p>Invii Pagamento Rimasti: <span id="paymentSubmissionsLeft">-</span></p> <!-- Added Payment Submissions -->
+            <p>Documenti Firmati Rimasti: <span id="signedDocumentsLeft">-</span></p> <!-- Added Signed Documents -->
         </div>
 
         <!-- API Key Input -->
@@ -258,7 +262,9 @@
             try {
                 const response = await fetch(`${BASE_URL}/user/usage?apiKey=${apiKey}`);
                 if (!response.ok) {
-                    throw new Error(`Errore HTTP durante il recupero della quota! Stato: ${response.status}`);
+                    const message = `Errore HTTP durante il recupero della quota! Stato: ${response.status}`;
+                    logMessage(message); // Log the error status
+                    throw new Error(message);
                 }
                 const data = await response.json();
                 if (data && data.content) {
@@ -268,28 +274,39 @@
                     return null;
                 }
             } catch (error) {
-                logMessage(`Errore nel recupero della quota: ${error.message}`);
+                logMessage(`Errore nella fetchQuotaData: ${error.message}`); // More specific log
                 console.error(error);
                 return null;
             }
         }
 
+
         // Function to update the quota dashboard
         function updateQuotaDashboard(quotaData) {
             if (quotaData) {
-                document.getElementById('formsLeft').innerText = quotaData.formLimit - quotaData.formCount;
-                document.getElementById('spaceUsed').innerText = formatBytes(quotaData.submissionSpaceUsed);
-                document.getElementById('spaceTotal').innerText = formatBytes(quotaData.submissionSpace);
-                document.getElementById('submissionsLeft').innerText = quotaData.monthlySubmissionLimit - quotaData.monthlySubmissionCount;
-                document.getElementById('formTransactionsLeft').innerText = quotaData.formTransactionLimit - quotaData.formTransactionCount;
+                document.getElementById('formsLeft').innerText = quotaData.formLimit !== undefined ? quotaData.formLimit - quotaData.formCount : 'N/A';
+                document.getElementById('spaceUsed').innerText = quotaData.submissionSpaceUsed !== undefined ? formatBytes(quotaData.submissionSpaceUsed) : 'N/A';
+                document.getElementById('spaceTotal').innerText = quotaData.submissionSpace !== undefined ? formatBytes(quotaData.submissionSpace) : 'N/A';
+                document.getElementById('submissionsLeft').innerText = quotaData.monthlySubmissionLimit !== undefined ? quotaData.monthlySubmissionLimit - quotaData.monthlySubmissionCount : 'N/A';
+                document.getElementById('formTransactionsLeft').innerText = quotaData.formTransactionLimit !== undefined ? quotaData.formTransactionLimit - quotaData.formTransactionCount : 'N/A';
+                document.getElementById('formViewsLeft').innerText = quotaData.formViewLimit !== undefined ? quotaData.formViewLimit - quotaData.formViewCount : 'N/A'; // Added Form Views
+                document.getElementById('totalSubmissionsLeft').innerText = quotaData.totalSubmissionLimit !== undefined ? quotaData.totalSubmissionLimit - quotaData.totalSubmissionCount : 'N/A'; // Added Total Submissions
+                document.getElementById('paymentSubmissionsLeft').innerText = quotaData.paymentSubmissionLimit !== undefined ? quotaData.paymentSubmissionLimit - quotaData.paymentSubmissionCount : 'N/A'; // Added Payment Submissions
+                document.getElementById('signedDocumentsLeft').innerText = quotaData.signedDocumentLimit !== undefined ? quotaData.signedDocumentLimit - quotaData.signedDocumentCount : 'N/A'; // Added Signed Documents
+
             } else {
                 document.getElementById('formsLeft').innerText = 'N/A';
                 document.getElementById('spaceUsed').innerText = 'N/A';
                 document.getElementById('spaceTotal').innerText = 'N/A';
                 document.getElementById('submissionsLeft').innerText = 'N/A';
                 document.getElementById('formTransactionsLeft').innerText = 'N/A';
+                document.getElementById('formViewsLeft').innerText = 'N/A';
+                document.getElementById('totalSubmissionsLeft').innerText = 'N/A';
+                document.getElementById('paymentSubmissionsLeft').innerText = 'N/A';
+                document.getElementById('signedDocumentsLeft').innerText = 'N/A';
             }
         }
+
 
         // Helper function to format bytes to human-readable size
         function formatBytes(bytes, decimals = 2) {
@@ -310,7 +327,7 @@
                 return;
             }
 
-            logMessage('Recupero dei moduli...');
+            logMessage('Recupero dei moduli e quota...'); // Updated log message
             try {
                 // Fetch quota data first
                 const quotaData = await fetchQuotaData(apiKey);
@@ -362,7 +379,7 @@
                 // Update the formDataMap with new data
                 formDataMap = newFormDataMap;
 
-                logMessage(`Recuperati ${forms.length} moduli.`);
+                logMessage(`Recuperati ${forms.length} moduli e quota aggiornata.`); // Updated log message
 
                 // Apply the current sort after refreshing the table
                 if (currentSortColumn) {
@@ -372,7 +389,7 @@
                     updateSortArrows();
                 }
             } catch (error) {
-                logMessage(`Errore nel recupero dei moduli: ${error.message}`);
+                logMessage(`Errore nel retrieveForms: ${error.message}`); // More specific log
                 console.error(error);
             } finally {
                 resetProgressBarTimer();
