@@ -333,12 +333,24 @@
         // Function to update the quota dashboard with data
         function updateQuotaDashboard(quota) {
             const content = quota.content || {}; // Safely access content, default to empty object
+            logMessage("Quota Content: " + JSON.stringify(content)); // Log the content object itself
+
+            const uploadsValue = content.uploads;
+            const totalSubmissionsValue = content.total_submissions;
+            const submissionsValue = content.submissions;
+            const viewsValue = content.views;
+
+            logMessage(`uploadsValue: ${uploadsValue}, type: ${typeof uploadsValue}`);
+            logMessage(`totalSubmissionsValue: ${totalSubmissionsValue}, type: ${typeof totalSubmissionsValue}`);
+            logMessage(`submissionsValue: ${submissionsValue}, type: ${typeof submissionsValue}`);
+            logMessage(`viewsValue: ${viewsValue}, type: ${typeof viewsValue}`);
+
 
             document.getElementById('quotaForms').textContent = 'N/A'; // Forms quota not in this response
-            document.getElementById('quotaSpace').textContent = content.uploads ? formatBytes(parseInt(content.uploads)) : 'N/A';
-            document.getElementById('quotaSubmissionsUsed').textContent = content.total_submissions !== undefined ? content.total_submissions : 'N/A';
-            document.getElementById('quotaSubmissionsAvailable').textContent = content.submissions !== undefined ? content.submissions : 'N/A';
-            document.getElementById('quotaFormViews').textContent = content.views !== undefined ? content.views : 'N/A';
+            document.getElementById('quotaSpace').textContent = uploadsValue ? formatBytes(parseInt(uploadsValue)) : 'N/A';
+            document.getElementById('quotaSubmissionsUsed').textContent = totalSubmissionsValue !== undefined ? totalSubmissionsValue : 'N/A';
+            document.getElementById('quotaSubmissionsAvailable').textContent = submissionsValue !== undefined ? submissionsValue : 'N/A';
+            document.getElementById('quotaFormViews').textContent = viewsValue !== undefined ? viewsValue : 'N/A';
             document.getElementById('quotaPaymentSubmissions').textContent = 'N/A'; // Payment Submissions unclear from response
             document.getElementById('quotaSSLSubmissions').textContent = 'N/A'; // SSL Submissions unclear from response
             document.getElementById('quotaReports').textContent = 'N/A'; // Reports quota not in this response
@@ -347,7 +359,7 @@
 
         // Helper function to format bytes to human-readable size
         function formatBytes(bytes, decimals = 2) {
-            if (!bytes || isNaN(bytes)) return 'N/A'; // Handle non-numeric bytes or undefined
+            if (!bytes || isNaN(bytes)) return 'N/A'; // Handle non-numeric bytes or NaN explicitly
             const k = 1024;
             const dm = decimals < 0 ? 0 : decimals;
             const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
