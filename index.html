@@ -248,7 +248,7 @@
     <!-- Main JavaScript -->
     <script>
         // JotForm API base URL for EU accounts
-        const BASE_URL = 'https://eu-api.jotform.com';
+        const BASE_URL = 'https://eu-api.jotform.com'; // Or 'https://api.jotform.com' if US account
 
         // Global variables to track sort state
         let currentSortColumn = null;
@@ -298,21 +298,31 @@
                 return; // Or handle appropriately, maybe clear quota display?
             }
 
+            logMessage('Fetching quota data...'); // Log start
+
             try {
                 const response = await fetch(`${BASE_URL}/user/usage?apiKey=${apiKey}`);
                 if (!response.ok) {
-                    throw new Error(`Failed to fetch quota. HTTP status: ${response.status}`);
+                    const message = `Failed to fetch quota. HTTP status: ${response.status}`;
+                    logMessage(message); // Log HTTP error in logBox
+                    throw new Error(message);
                 }
                 const quotaData = await response.json();
+
+                logMessage('Raw Quota API Response: ' + JSON.stringify(quotaData)); // Log raw response in logBox
+
                 if (quotaData && quotaData.content) {
                     updateQuotaDashboard(quotaData.content);
+                    logMessage('Quota dashboard updated successfully.'); // Log success
                 } else {
-                    logMessage('Unexpected response structure when fetching quota data.');
+                    const message = 'Unexpected response structure when fetching quota data.';
+                    logMessage(message); // Log unexpected structure in logBox
+                    logMessage('Quota data might not be displayed correctly.');
                 }
             } catch (error) {
-                logMessage(`Error fetching quota data: ${error.message}`);
-                console.error('Error fetching quota:', error);
-                // Optionally update dashboard to show error or "N/A"
+                logMessage(`Error fetching quota data: ${error.message}`); // Log error message in logBox
+                console.error('Error fetching quota:', error); // Keep console.error for developer debugging
+                // Optionally update dashboard to show error or "N/A" - already handled in updateQuotaDashboard
                 updateQuotaDashboard({
                     forms: { available: 'N/A' },
                     space: { available: 'N/A' },
