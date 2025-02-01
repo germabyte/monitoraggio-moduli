@@ -116,6 +116,11 @@
             color: #007bff; /* Jotform blue color */
             font-weight: bold;
         }
+        #quotaDashboard .warning-text {
+            font-size: 0.8rem;
+            color: orange;
+        }
+
         @media (max-width: 768px) {
             #quotaDashboard {
                 position: fixed; /* Fixed for mobile view */
@@ -148,20 +153,18 @@
         <div id="quotaDashboard">
             <h6>Quota Utilizzo</h6>
             <div class="quota-item">
-                <p><span class="quota-label">Moduli Usati:</span> <span id="quotaFormsUsed" class="quota-value">N/A</span></p>
+                <p><span class="quota-label">Moduli:</span> <span id="quotaForms" class="quota-value">N/A</span></p>
             </div>
             <div class="quota-item">
                 <p><span class="quota-label">Spazio Utilizzato:</span> <span id="quotaSpace" class="quota-value">Caricamento...</span></p>
             </div>
             <div class="quota-item">
-                <p><span class="quota-label">Invii Mensili Disponibili:</span> <span id="quotaSubmissionsAvailable" class="quota-value">Caricamento...</span></p>
-            </div>
-             <div class="quota-item">
-                <p><span class="quota-label">Invii Totali Usati:</span> <span id="quotaTotalSubmissionsUsed" class="quota-value">Caricamento...</span></p>
+                <p><span class="quota-label">Invii Moduli:</span> <span id="quotaSubmissions" class="quota-value">Caricamento...</span></p>
             </div>
             <div class="quota-item">
-                <p><span class="quota-label">Visualizzazioni Moduli Usate:</span> <span id="quotaFormViewsUsed" class="quota-value">Caricamento...</span></p>
+                <p><span class="quota-label">Visualizzazioni Moduli:</span> <span id="quotaFormViews" class="quota-value">Caricamento...</span></p>
             </div>
+            <p class="warning-text">Avviso: Dashboard ottimizzata per piani Free. Limiti hardcoded.</p>
         </div>
 
         <!-- API Key Input and Main App -->
@@ -262,6 +265,13 @@
         // Store form data to compare during refresh
         let formDataMap = new Map();
 
+        // Jotform Free Plan Limits (Hardcoded)
+        const FREE_PLAN_FORMS_LIMIT = 5;
+        const FREE_PLAN_SUBMISSIONS_LIMIT = 100;
+        const FREE_PLAN_FORM_VIEWS_LIMIT = 1000;
+        const FREE_PLAN_UPLOAD_SPACE_LIMIT_BYTES = 100 * 1024 * 1024; // 100MB
+
+
         // Event Listeners
         document.getElementById('retrieveFormsBtn').addEventListener('click', () => {
             retrieveForms();
@@ -292,49 +302,74 @@
                 return; // Or handle appropriately, maybe clear quota display?
             }
 
-            logMessage('Fetching quota data...');
+            logMessage('Fetching quota data...'); // Log start
 
             try {
                 const response = await fetch(`${BASE_URL}/user/usage?apiKey=${apiKey}`);
                 if (!response.ok) {
                     const message = `Failed to fetch quota. HTTP status: ${response.status}`;
-                    logMessage(message);
+                    logMessage(message); // Log HTTP error in logBox
                     throw new Error(message);
                 }
                 const quotaData = await response.json();
 
-                logMessage('Raw Quota API Response: ' + JSON.stringify(quotaData));
+                logMessage('Raw Quota API Response: ' + JSON.stringify(quotaData)); // Log raw response in logBox
 
                 if (quotaData && quotaData.content) {
-                    updateQuotaDashboard(quotaData.content);
-                    logMessage('Quota dashboard updated successfully.');
+                    updateQuotaDashboard(quotaData);
+                    logMessage('Quota dashboard updated successfully.'); // Log success
                 } else {
                     const message = 'Unexpected response structure when fetching quota data.';
-                    logMessage(message);
+                    logMessage(message); // Log unexpected structure in logBox
                     logMessage('Quota data might not be displayed correctly.');
                 }
             } catch (error) {
-                logMessage(`Error fetching quota data: ${error.message}`);
-                console.error('Error fetching quota:', error);
-                updateQuotaDashboard({});
+                logMessage(`Error fetching quota data: ${error.message}`); // Log error message in logBox
+                console.error('Error fetching quota:', error); // Keep console.error for developer debugging
+                // Optionally update dashboard to show error or "N/A" - already handled in updateQuotaDashboard
+                updateQuotaDashboard({}); // Pass empty object to display defaults as N/A
             }
         }
 
         // Function to update the quota dashboard with data
-        function updateQuotaDashboard(content) {
-            content = content || {}; // Ensure content is an object
+        function updateQuotaDashboard(quota) {
+            logMessage("Full Quota Object received by updateQuotaDashboard: " + JSON.stringify(quota)); // Log the entire quota object right here
 
-            document.getElementById('quotaFormsUsed').textContent = content.form_count !== undefined ? content.form_count : 'N/A';
-            document.getElementById('quotaSpace').textContent = content.uploads ? formatBytes(parseInt(content.uploads)) : 'N/A';
-            document.getElementById('quotaSubmissionsAvailable').textContent = content.submissions !== undefined ? content.submissions : 'N/A';
-            document.getElementById('quotaTotalSubmissionsUsed').textContent = content.total_submissions !== undefined ? content.total_submissions : 'N/A';
-            document.getElementById('quotaFormViewsUsed').textContent = content.views !== undefined ? content.views : 'N/A';
+            if (!quota || !quota.content) { // Check if quota or quota.content is valid
+                logMessage("Quota object or quota.content is invalid/empty.");
+                document.getElementById('quotaForms').textContent = `N/A / ${FREE_PLAN_FORMS_LIMIT}`;
+                document.getElementById('quotaSpace').textContent = 'N/A';
+                document.getElementById('quotaSubmissions').textContent = `N/A / ${FREE_PLAN_SUBMISSIONS_LIMIT}`;
+                document.getElementById('quotaFormViews').textContent = `N/A / ${FREE_PLAN_FORM_VIEWS_LIMIT}`;
+                return; // Exit the function if quota data is invalid
+            }
+
+
+            const content = quota.content || {}; // Safely access content, default to empty object
+            logMessage("Quota Content: " + JSON.stringify(content)); // Log the content object itself
+
+            const uploadsValue = content.uploads;
+            const totalSubmissionsValue = content.total_submissions;
+            const viewsValue = content.views;
+            const formCountValue = content.form_count;
+
+
+            logMessage(`uploadsValue: ${uploadsValue}, type: ${typeof uploadsValue}`);
+            logMessage(`totalSubmissionsValue: ${totalSubmissionsValue}, type: ${typeof totalSubmissionsValue}`);
+            logMessage(`viewsValue: ${viewsValue}, type: ${typeof viewsValue}`);
+            logMessage(`formCountValue: ${formCountValue}, type: ${typeof formCountValue}`);
+
+
+            document.getElementById('quotaForms').textContent = `${formCountValue || 'N/A'} / ${FREE_PLAN_FORMS_LIMIT}`;
+            document.getElementById('quotaSpace').textContent = uploadsValue ? formatBytes(parseInt(uploadsValue)) : 'N/A';
+            document.getElementById('quotaSubmissions').textContent = `${totalSubmissionsValue || 'N/A'} / ${FREE_PLAN_SUBMISSIONS_LIMIT}`;
+            document.getElementById('quotaFormViews').textContent = `${viewsValue || 'N/A'} / ${FREE_PLAN_FORM_VIEWS_LIMIT}`;
         }
 
 
         // Helper function to format bytes to human-readable size
         function formatBytes(bytes, decimals = 2) {
-            if (!bytes || isNaN(bytes)) return 'N/A';
+            if (!bytes || isNaN(bytes)) return 'N/A'; // Handle non-numeric bytes or NaN explicitly
             const k = 1024;
             const dm = decimals < 0 ? 0 : decimals;
             const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
@@ -343,7 +378,7 @@
         }
 
 
-        // Function to retrieve all forms (rest is the same as before, only quota dashboard functions are changed)
+        // Function to retrieve all forms (same as before)
         async function retrieveForms() {
             const apiKey = document.getElementById('apiKey').value.trim();
             if (!apiKey) {
@@ -418,7 +453,7 @@
         }
 
 
-        // Function to get last submission date for a form (rest is the same)
+        // Function to get last submission date for a form (same as before)
 		async function getLastSubmissionDate(formId, apiKey) {
 			try {
 				const response = await fetch(`${BASE_URL}/form/${formId}/submissions?apiKey=${apiKey}&limit=1&orderby=created_at&sort=desc`);
@@ -460,7 +495,7 @@
 			}
 		}
 
-		// Helper function to determine if a date is in Daylight Saving Time in ET (rest is the same)
+		// Helper function to determine if a date is in Daylight Saving Time in ET (same as before)
 		function isDaylightSavingTimeInET(date) {
 			const year = date.getUTCFullYear();
 
@@ -476,7 +511,7 @@
 		}
 
 
-        // Function to update the table with new form data (rest is the same)
+        // Function to update the table with new form data (same as before)
         function updateTable(newFormDataMap) {
             const tbody = document.querySelector('#formsTable tbody');
             const existingRows = tbody.querySelectorAll('tr');
@@ -583,7 +618,7 @@
             });
         }
 
-        // Function to delete selected submissions (rest is the same)
+        // Function to delete selected submissions (same as before)
         async function deleteSelectedSubmissions() {
             const apiKey = document.getElementById('apiKey').value.trim();
             if (!apiKey) {
@@ -626,7 +661,7 @@
             logMessage('Processo di eliminazione completato.');
         }
 
-        // Function to delete all submissions for a form (rest is the same)
+        // Function to delete all submissions for a form (same as before)
         async function deleteAllSubmissions(formId, apiKey) {
             try {
                 let page = 1;
@@ -665,7 +700,7 @@
             }
         }
 
-        // Function to sort the table based on a column (rest is the same)
+        // Function to sort the table based on a column (same as before)
         function sortTable(column) {
             if (!column) return;
 
@@ -682,13 +717,13 @@
             updateSortArrows();
         }
 
-        // Helper function to get column index based on column name (rest is the same)
+        // Helper function to get column index based on column name (same as before)
         function getColumnIndex(column) {
             const columns = ['select', 'title', 'id', 'status', 'submissions', 'lastSubmission'];
             return columns.indexOf(column) + 1;
         }
 
-        // Apply the current sort after refreshing the table (rest is the same)
+        // Apply the current sort after refreshing the table (same as before)
         function applyCurrentSort() {
             if (!currentSortColumn) return; // No sort to apply
 
@@ -720,7 +755,7 @@
             rows.forEach(row => tbody.appendChild(row));
         }
 
-        // Function to update the sort arrows in the table headers (rest is the same)
+        // Function to update the sort arrows in the table headers (same as before)
         function updateSortArrows() {
             // Remove existing arrows
             document.querySelectorAll('#formsTable th').forEach(header => {
@@ -740,7 +775,7 @@
             }
         }
 
-        // Password Authentication Logic (rest is the same)
+        // Password Authentication Logic (same as before)
         document.getElementById('authForm').addEventListener('submit', async function(event) {
             event.preventDefault(); // Prevent form submission
 
@@ -805,7 +840,7 @@
             }
         });
 
-        // Display the authentication modal on page load (rest is the same)
+        // Display the authentication modal on page load (same as before)
         document.addEventListener('DOMContentLoaded', function() {
             authModalInstance = new bootstrap.Modal(document.getElementById('authModal'), {
                 backdrop: 'static',
@@ -817,7 +852,7 @@
             startProgressBarTimer();
         });
 
-        // Progress Bar Functions (rest is the same)
+        // Progress Bar Functions (same as before)
 
         // Function to update the progress bar
         function updateProgressBar() {
