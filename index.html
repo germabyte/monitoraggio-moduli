@@ -286,11 +286,11 @@
             });
         });
 
-        // Function to log messages with timestamps - REVISED FOR USER-FRIENDLY LOGS
+        // Function to log messages with timestamps
         function logMessage(message) {
             const logBox = document.getElementById('logBox');
             const timestamp = new Date().toLocaleString();
-            logBox.innerHTML += `<div>${timestamp}: ${message}</div>`; // Removed <strong> for cleaner look
+            logBox.innerHTML += `<div><strong>${timestamp}:</strong> ${message}</div>`;
             logBox.scrollTop = logBox.scrollHeight;
         }
 
@@ -307,20 +307,16 @@
             try {
                 const response = await fetch(`${BASE_URL}/user/usage?apiKey=${apiKey}`);
                 if (!response.ok) {
-                    const message = `Failed to fetch quota. HTTP status: ${response.status}`;
-                    logMessage(message);
-                    throw new Error(message);
+                    logMessage(`Failed to fetch quota. HTTP status: ${response.status}`);
+                    throw new Error(`Errore HTTP! Stato: ${response.status}`);
                 }
                 const quotaData = await response.json();
-
-                // Removed logging of raw JSON response from logBox for cleaner UI
-                // logMessage('Raw Quota API Response: ' + JSON.stringify(quotaData));
 
                 if (quotaData && quotaData.content) {
                     updateQuotaDashboard(quotaData);
                     logMessage('Quota dashboard updated.');
                 } else {
-                    logMessage('Could not update quota dashboard.');
+                    logMessage('Unexpected response structure for quota data.');
                 }
             } catch (error) {
                 logMessage(`Error fetching quota data: ${error.message}`);
@@ -331,35 +327,12 @@
 
         // Function to update the quota dashboard with data
         function updateQuotaDashboard(quota) {
-            // Removed detailed quota object logging from logBox for cleaner UI
-            // logMessage("Full Quota Object received by updateQuotaDashboard: " + JSON.stringify(quota));
-
-            if (!quota || !quota.content) {
-                // Removed "Quota object or quota.content is invalid/empty." log from logBox for cleaner UI
-                // logMessage("Quota object or quota.content is invalid/empty.");
-                document.getElementById('quotaForms').textContent = `N/A / ${FREE_PLAN_FORMS_LIMIT}`;
-                document.getElementById('quotaSpace').textContent = 'N/A';
-                document.getElementById('quotaSubmissions').textContent = `N/A / ${FREE_PLAN_SUBMISSIONS_LIMIT}`;
-                document.getElementById('quotaFormViews').textContent = `N/A / ${FREE_PLAN_FORM_VIEWS_LIMIT}`;
-                return;
-            }
-
-
             const content = quota.content || {};
-            // Removed "Quota Content" logging from logBox for cleaner UI
-            // logMessage("Quota Content: " + JSON.stringify(content));
 
             const uploadsValue = content.uploads;
             const totalSubmissionsValue = content.total_submissions;
             const viewsValue = content.views;
             const formCountValue = content.form_count;
-
-            // Removed individual value type loggings from logBox for cleaner UI
-            // logMessage(`uploadsValue: ${uploadsValue}, type: ${typeof uploadsValue}`);
-            // logMessage(`totalSubmissionsValue: ${totalSubmissionsValue}, type: ${typeof totalSubmissionsValue}`);
-            // logMessage(`viewsValue: ${viewsValue}, type: ${typeof viewsValue}`);
-            // logMessage(`formCountValue: ${formCountValue}, type: ${typeof formCountValue}`);
-
 
             document.getElementById('quotaForms').textContent = `${formCountValue || 'N/A'} / ${FREE_PLAN_FORMS_LIMIT}`;
             document.getElementById('quotaSpace').textContent = uploadsValue ? formatBytes(parseInt(uploadsValue)) : 'N/A';
@@ -379,7 +352,7 @@
         }
 
 
-        // Function to retrieve all forms (same as before, log messages kept)
+        // Function to retrieve all forms (same as before)
         async function retrieveForms() {
             const apiKey = document.getElementById('apiKey').value.trim();
             if (!apiKey) {
@@ -389,6 +362,7 @@
 
             logMessage('Retrieving forms...');
             try {
+                // Add counts=true to get submission counts
                 const response = await fetch(`${BASE_URL}/user/forms?apiKey=${apiKey}&counts=true`);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
@@ -396,25 +370,29 @@
                 const data = await response.json();
 
                 if (!data.content) {
-                    logMessage('Unexpected response structure when retrieving forms.');
+                    logMessage('Unexpected response structure.');
                     return;
                 }
 
                 const forms = data.content;
 
+                // Map to store new form data
                 const newFormDataMap = new Map();
 
+                // Process each form
                 for (let [index, form] of forms.entries()) {
-                    const formTitle = form.title || 'Untitled';
+                    const formTitle = form.title || 'Untitled Form';
                     const formId = form.id || 'N/A';
                     const formStatus = form.status || 'ENABLED';
                     const isActive = formStatus.toUpperCase() === 'ENABLED' || formStatus.toUpperCase() === 'ATTIVATO';
 
+                    // Get submission count from form data
                     const submissionCount = form.count || 0;
 
-                    logMessage(`Form ${index + 1}/${forms.length}: '${formTitle}' (ID: ${formId}) has ${submissionCount} submissions`); // Kept this log
+                    logMessage(`Form ${index + 1}/${forms.length}: '${formTitle}' (ID: ${formId}) has ${submissionCount} submissions`);
                     const lastSubmissionDate = await getLastSubmissionDate(formId, apiKey);
 
+                    // Store form data
                     newFormDataMap.set(formId, {
                         formTitle,
                         formId,
@@ -425,13 +403,15 @@
                     });
                 }
 
+                // Update the table with new data
                 updateTable(newFormDataMap);
 
+                // Update the formDataMap with new data
                 formDataMap = newFormDataMap;
 
-                logMessage(`Retrieved ${forms.length} forms.`); // Kept this log
+                logMessage(`Retrieved ${forms.length} forms.`);
 
-
+                // Apply the current sort after refreshing the table
                 if (currentSortColumn) {
                     applyCurrentSort();
                     updateSortArrows();
@@ -439,7 +419,7 @@
                     updateSortArrows();
                 }
             } catch (error) {
-                logMessage(`Error retrieving forms: ${error.message}`); // Kept error log
+                logMessage(`Error retrieving forms: ${error.message}`);
                 console.error(error);
             } finally {
                 resetProgressBarTimer();
@@ -447,20 +427,22 @@
         }
 
 
-        // Function to get last submission date for a form (same as before, log messages kept)
+        // Function to get last submission date for a form (same as before)
 		async function getLastSubmissionDate(formId, apiKey) {
 			try {
 				const response = await fetch(`${BASE_URL}/form/${formId}/submissions?apiKey=${apiKey}&limit=1&orderby=created_at&sort=desc`);
-				if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+				if (!response.ok) throw new Error(`Errore HTTP! Stato: ${response.status}`);
 				const data = await response.json();
 
 				if (data.content && data.content.length > 0) {
 					const createdAt = data.content[0].created_at;
+
 					const [datePart, timePart] = createdAt.split(' ');
 					const [year, month, day] = datePart.split('-').map(Number);
 					const [hour, minute, second] = timePart.split(':').map(Number);
 
 					const submissionDate = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+
 					const isDST = isDaylightSavingTimeInET(submissionDate);
 					const etOffset = isDST ? -4 : -5;
 					submissionDate.setUTCHours(submissionDate.getUTCHours() - etOffset);
@@ -477,7 +459,7 @@
 					return 'N/A';
 				}
 			} catch (error) {
-				logMessage(`Error getting last submission date for form ${formId}: ${error.message}`); // Kept error log
+				logMessage(`Error getting last submission date for form ${formId}: ${error.message}`);
 				return 'N/A';
 			}
 		}
@@ -493,10 +475,91 @@
 		}
 
 
-        // Function to update the table with new form data (same as before, no log changes needed)
-        function updateTable(newFormDataMap) { // ... (rest of updateTable function - no changes) ... }
+        // Function to update the table with new form data (same as before)
+        function updateTable(newFormDataMap) {
+            const tbody = document.querySelector('#formsTable tbody');
+            const existingRows = tbody.querySelectorAll('tr');
+            const existingRowsMap = new Map();
+            existingRows.forEach(row => {
+                const formId = row.getAttribute('data-form-id');
+                existingRowsMap.set(formId, row);
+            });
+            const processedFormIds = new Set();
 
-        // Function to delete selected submissions (same as before, log messages kept)
+            newFormDataMap.forEach((formData, formId) => {
+                const existingRow = existingRowsMap.get(formId);
+                if (existingRow) {
+                    const cells = existingRow.children;
+                    const submissionCountCell = cells[4];
+                    const lastSubmissionCell = cells[5];
+                    const prevSubmissionCount = submissionCountCell.innerText;
+                    const prevLastSubmission = lastSubmissionCell.innerText;
+
+                    if (prevSubmissionCount != formData.submissionCount || prevLastSubmission != formData.lastSubmissionDate) {
+                        submissionCountCell.innerText = formData.submissionCount;
+                        lastSubmissionCell.innerText = formData.lastSubmissionDate;
+                        existingRow.classList.add('row-updated');
+                        setTimeout(() => {
+                            existingRow.classList.remove('row-updated');
+                        }, 1000);
+                    }
+                    const checkbox = existingRow.querySelector('.form-select-checkbox');
+                    checkbox.disabled = formData.submissionCount === 0;
+                    const statusCell = cells[3];
+                    statusCell.innerHTML = formData.isActive ? '<span class="badge bg-success">Attivato</span>' : '<span class="badge bg-secondary">Disattivato</span>';
+
+                    if (!formData.isActive) {
+                        existingRow.classList.add('table-secondary');
+                    } else {
+                        existingRow.classList.remove('table-secondary');
+                    }
+                    processedFormIds.add(formId);
+                } else {
+                    const row = document.createElement('tr');
+                    row.setAttribute('data-form-id', formId);
+                    row.innerHTML = `
+                        <td class="text-center">
+                            <input type="checkbox" class="form-select-checkbox" data-form-id="${formId}" ${formData.submissionCount > 0 ? '' : 'disabled'} ${selectedFormIds.has(formId) ? 'checked' : ''}>
+                        </td>
+                        <td>${formData.formTitle}</td>
+                        <td>${formData.formId}</td>
+                        <td>${formData.isActive ? '<span class="badge bg-success">Attivato</span>' : '<span class="badge bg-secondary">Disattivato</span>'}</td>
+                        <td class="text-end">${formData.submissionCount}</td>
+                        <td class="text-end">${formData.lastSubmissionDate}</td>
+                    `;
+                    if (!formData.isActive) {
+                        row.classList.add('table-secondary');
+                    }
+                    tbody.appendChild(row);
+                    const checkbox = row.querySelector('.form-select-checkbox');
+                    if (checkbox) {
+                        checkbox.addEventListener('change', function() {
+                            const formId = this.getAttribute('data-form-id');
+                            if (this.checked) {
+                                selectedFormIds.add(formId);
+                            } else {
+                                selectedFormIds.delete(formId);
+                            }
+                        });
+                    }
+                    row.classList.add('row-updated');
+                    setTimeout(() => {
+                        row.classList.remove('row-updated');
+                    }, 1000);
+                    processedFormIds.add(formId);
+                }
+            });
+
+            existingRows.forEach(row => {
+                const formId = row.getAttribute('data-form-id');
+                if (!newFormDataMap.has(formId)) {
+                    tbody.removeChild(row);
+                    selectedFormIds.delete(formId);
+                }
+            });
+        }
+
+        // Function to delete selected submissions
         async function deleteSelectedSubmissions() {
             const apiKey = document.getElementById('apiKey').value.trim();
             if (!apiKey) {
@@ -510,14 +573,16 @@
                 return;
             }
 
-            if (!confirm(`Are you sure you want to delete submissions for ${checkboxes.length} form(s)? This action cannot be undone.`)) {
+            if (!confirm(`Are you sure you want to delete submissions for ${checkboxes.length} form(s)? This action is irreversible and will ONLY delete submissions, NOT the forms.`)) {
                 return;
             }
+
+            logMessage(`Deletion process started for ${checkboxes.length} forms.`); // Confirmation in log
 
             for (let checkbox of checkboxes) {
                 const formId = checkbox.getAttribute('data-form-id');
                 const formTitle = checkbox.closest('tr').children[1].innerText;
-                logMessage(`Deleting submissions for form: ${formTitle} (ID: ${formId})`); // Kept this log
+                logMessage(`Deleting submissions for form: ${formTitle} (ID: ${formId})`);
                 await deleteAllSubmissions(formId, apiKey);
                 const row = checkbox.closest('tr');
                 row.children[4].innerText = '0';
@@ -533,11 +598,11 @@
                 }
             }
 
-            alert('Deletion process completed. Check the log for details.');
-            logMessage('Deletion process completed.'); // Kept this log
+            alert('Deletion process completed. Check the log for details. Note: Only submissions were deleted, forms remain.'); // Clear confirmation alert
+            logMessage('Deletion process completed. Only submissions were deleted.'); // Log completion
         }
 
-        // Function to delete all submissions for a form (same as before, log messages kept)
+        // Function to delete all submissions for a form (same as before)
         async function deleteAllSubmissions(formId, apiKey) {
             try {
                 let page = 1;
@@ -556,9 +621,9 @@
                                 method: 'DELETE'
                             });
                             if (deleteResponse.ok) {
-                                logMessage(`Deleted submission ID: ${submissionId}`); // Kept this log
+                                logMessage(`Deleted submission ID: ${submissionId}`);
                             } else {
-                                logMessage(`Could not delete submission ID: ${submissionId}. Status: ${deleteResponse.status}`); // Kept this log
+                                logMessage(`Failed to delete submission ID: ${submissionId}. Status: ${deleteResponse.status}`);
                             }
                         }
                         hasMore = data.currentPage < data.totalPages;
@@ -568,29 +633,189 @@
                     }
                 }
 
-                logMessage(`All submissions for form ID ${formId} have been deleted.`); // Kept this log
+                logMessage(`All submissions for form ID ${formId} have been deleted.`);
             } catch (error) {
-                logMessage(`Error deleting submissions for form ID ${formId}: ${error.message}`); // Kept error log
+                logMessage(`Error deleting submissions for form ID ${formId}: ${error.message}`);
                 console.error(error);
             }
         }
 
-        // Sorting functions (same as before, no log changes needed)
-        function sortTable(column) { /* ... */ }
-        function getColumnIndex(column) { /* ... */ }
-        function applyCurrentSort() { /* ... */ }
-        function updateSortArrows() { /* ... */ }
+        // Function to sort the table based on a column (same as before)
+        function sortTable(column) {
+            if (!column) return;
 
-        // Password Authentication Logic (same as before, log messages kept)
-        document.getElementById('authForm').addEventListener('submit', async function(event) { /* ... */ });
+            if (currentSortColumn === column) {
+                currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSortOrder = 'asc';
+                currentSortColumn = column;
+            }
 
-        // Initial modal display and progress bar (same as before, no log changes needed)
-        document.addEventListener('DOMContentLoaded', function() { /* ... */ });
+            applyCurrentSort();
+            updateSortArrows();
+        }
 
-        // Progress Bar Functions (same as before, no log changes needed)
-        function updateProgressBar() { /* ... */ }
-        function startProgressBarTimer() { /* ... */ }
-        function resetProgressBarTimer() { /* ... */ }
+        // Helper function to get column index based on column name (same as before)
+        function getColumnIndex(column) {
+            const columns = ['select', 'title', 'id', 'status', 'submissions', 'lastSubmission'];
+            return columns.indexOf(column) + 1;
+        }
+
+        // Apply the current sort after refreshing the table (same as before)
+        function applyCurrentSort() {
+            if (!currentSortColumn) return;
+
+            const tbody = document.querySelector('#formsTable tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+
+            rows.sort((a, b) => {
+                let aText = a.querySelector(`td:nth-child(${getColumnIndex(currentSortColumn)})`).innerText.trim();
+                let bText = b.querySelector(`td:nth-child(${getColumnIndex(currentSortColumn)})`).innerText.trim();
+
+                if (currentSortColumn === 'submissions') {
+                    aText = parseInt(aText) || 0;
+                    bText = parseInt(bText) || 0;
+                } else if (currentSortColumn === 'lastSubmission') {
+                    aText = new Date(aText).getTime() || 0;
+                    bText = new Date(bText).getTime() || 0;
+                } else {
+                    aText = aText.toLowerCase();
+                    bText = bText.toLowerCase();
+                }
+
+                if (aText < bText) return currentSortOrder === 'asc' ? -1 : 1;
+                if (aText > bText) return currentSortOrder === 'asc' ? 1 : -1;
+                return 0;
+            });
+
+            rows.forEach(row => tbody.appendChild(row));
+        }
+
+        // Function to update the sort arrows in the table headers (same as before)
+        function updateSortArrows() {
+            document.querySelectorAll('#formsTable th').forEach(header => {
+                const sortArrow = header.querySelector('.sort-arrow');
+                if (sortArrow) {
+                    sortArrow.innerHTML = '';
+                }
+            });
+
+            if (currentSortColumn) {
+                const header = document.querySelector(`#formsTable th[data-column="${currentSortColumn}"]`);
+                const sortArrow = header.querySelector('.sort-arrow');
+                if (sortArrow) {
+                    sortArrow.innerHTML = currentSortOrder === 'asc' ? '<i class="bi bi-caret-up-fill"></i>' : '<i class="bi bi-caret-down-fill"></i>';
+                }
+            }
+        }
+
+        // Password Authentication Logic (same as before)
+        document.getElementById('authForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const userPassword = document.getElementById('userPassword').value.trim();
+            const authError = document.getElementById('authError');
+            authError.style.display = 'none';
+
+            if (!userPassword) {
+                authError.textContent = 'Please enter a valid password.';
+                authError.style.display = 'block';
+                return;
+            }
+
+            try {
+                const response = await fetch('whitelist.txt');
+                if (!response.ok) {
+                    throw new Error(`Could not retrieve whitelist. Status: ${response.status}`);
+                }
+
+                const whitelistData = await response.text();
+                const lines = whitelistData.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+
+                const userEntries = lines.map(line => {
+                    const [encodedPassword, encodedApiKey] = line.split(',');
+                    const password = atob(encodedPassword);
+                    const apiKey = atob(encodedApiKey);
+                    return { password, apiKey };
+                });
+
+                const userEntry = userEntries.find(entry => entry.password === userPassword);
+
+                if (userEntry) {
+                    authModalInstance.hide();
+                    document.getElementById('mainApp').style.display = 'block';
+                    logMessage(`User authenticated successfully.`);
+
+                    const loadDefaultApiKey = confirm("Load default API key?");
+                    if (loadDefaultApiKey) {
+                        document.getElementById('apiKey').value = userEntry.apiKey;
+                        logMessage('Default API key loaded.');
+                    } else {
+                        logMessage('Please enter your custom API key.');
+                    }
+
+                    retrieveForms();
+                    fetchAndDisplayQuota();
+                } else {
+                    authError.textContent = 'Unauthorized password.';
+                    authError.style.display = 'block';
+                    logMessage(`Unauthorized access attempt.`);
+                }
+            } catch (error) {
+                authError.textContent = `Authentication error: ${error.message}`;
+                authError.style.display = 'block';
+                logMessage(`Authentication error: ${error.message}`);
+                console.error(error);
+            }
+        });
+
+        // Display the authentication modal on page load (same as before)
+        document.addEventListener('DOMContentLoaded', function() {
+            authModalInstance = new bootstrap.Modal(document.getElementById('authModal'), {
+                backdrop: 'static',
+                keyboard: false
+            });
+            authModalInstance.show();
+
+            // Start the progress bar timer on initial page load
+            startProgressBarTimer();
+        });
+
+        // Progress Bar Functions (same as before)
+
+        // Function to update the progress bar
+        function updateProgressBar() {
+            const progressBar = document.getElementById('refreshProgressBar');
+            const countdown = document.getElementById('refreshCountdown');
+            const percent = ((refreshInterval - timeLeft) / refreshInterval) * 100;
+            progressBar.style.width = percent + '%';
+            progressBar.setAttribute('aria-valuenow', refreshInterval - timeLeft);
+            countdown.innerText = `${timeLeft} seconds`;
+        }
+
+        // Function to start the progress bar timer
+        function startProgressBarTimer() {
+            timeLeft = refreshInterval;
+            updateProgressBar();
+            clearInterval(progressBarTimer);
+            progressBarTimer = setInterval(() => {
+                timeLeft--;
+                if (timeLeft <= 0) {
+                    retrieveForms();
+                    fetchAndDisplayQuota();
+                    timeLeft = refreshInterval;
+                }
+                updateProgressBar();
+            }, 1000);
+        }
+
+        // Function to reset the progress bar timer
+        function resetProgressBarTimer() {
+            timeLeft = refreshInterval;
+            updateProgressBar();
+            clearInterval(progressBarTimer);
+            startProgressBarTimer();
+        }
     </script>
 </body>
 </html>
