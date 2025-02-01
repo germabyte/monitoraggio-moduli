@@ -151,9 +151,9 @@
 
         <!-- Quota Dashboard -->
         <div id="quotaDashboard">
-            <h6>Quota Utilizzo</h6>
+            <h6>Utilizzo Quota</h6>
             <div class="quota-item">
-                <p><span class="quota-label">Moduli:</span> <span id="quotaForms" class="quota-value">N/A</span></p>
+                <p><span class="quota-label">Moduli:</span> <span id="quotaForms" class="quota-value">N/D</span></p>
             </div>
             <div class="quota-item">
                 <p><span class="quota-label">Spazio Utilizzato:</span> <span id="quotaSpace" class="quota-value">Caricamento...</span></p>
@@ -298,52 +298,70 @@
         async function fetchAndDisplayQuota() {
             const apiKey = document.getElementById('apiKey').value.trim();
             if (!apiKey) {
-                console.warn('API Key is missing, cannot fetch quota.');
+                console.warn('API Key mancante, impossibile recuperare la quota.');
                 return;
             }
 
-            logMessage('Fetching quota data...');
+            logMessage('Recupero dati quota...'); // Log start
 
             try {
                 const response = await fetch(`${BASE_URL}/user/usage?apiKey=${apiKey}`);
                 if (!response.ok) {
-                    logMessage(`Failed to fetch quota. HTTP status: ${response.status}`);
-                    throw new Error(`Errore HTTP! Stato: ${response.status}`);
+                    const message = `Errore nel recupero della quota. Stato HTTP: ${response.status}`;
+                    logMessage(message); // Log HTTP error in logBox
+                    throw new Error(message);
                 }
                 const quotaData = await response.json();
 
+
                 if (quotaData && quotaData.content) {
                     updateQuotaDashboard(quotaData);
-                    logMessage('Quota dashboard updated.');
+                    logMessage('Dashboard quota aggiornata con successo.'); // Log success
                 } else {
-                    logMessage('Unexpected response structure for quota data.');
+                    const message = 'Struttura di risposta inaspettata durante il recupero dei dati quota.';
+                    logMessage(message); // Log unexpected structure in logBox
+                    logMessage('I dati quota potrebbero non essere visualizzati correttamente.');
                 }
             } catch (error) {
-                logMessage(`Error fetching quota data: ${error.message}`);
-                console.error('Error fetching quota:', error);
-                updateQuotaDashboard({});
+                logMessage(`Errore nel recupero dei dati quota: ${error.message}`); // Log error message in logBox
+                console.error('Errore nel recupero della quota:', error); // Keep console.error for developer debugging
+                // Optionally update dashboard to show error or "N/A" - already handled in updateQuotaDashboard
+                updateQuotaDashboard({}); // Pass empty object to display defaults as N/A
             }
         }
 
         // Function to update the quota dashboard with data
         function updateQuotaDashboard(quota) {
-            const content = quota.content || {};
+
+            if (!quota || !quota.content) { // Check if quota or quota.content is valid
+                logMessage("Oggetto quota o quota.content non valido/vuoto.");
+                document.getElementById('quotaForms').textContent = `N/D / ${FREE_PLAN_FORMS_LIMIT}`;
+                document.getElementById('quotaSpace').textContent = 'N/D';
+                document.getElementById('quotaSubmissions').textContent = `N/D / ${FREE_PLAN_SUBMISSIONS_LIMIT}`;
+                document.getElementById('quotaFormViews').textContent = `N/D / ${FREE_PLAN_FORM_VIEWS_LIMIT}`;
+                return; // Exit the function if quota data is invalid
+            }
+
+
+            const content = quota.content || {}; // Safely access content, default to empty object
+
 
             const uploadsValue = content.uploads;
             const totalSubmissionsValue = content.total_submissions;
             const viewsValue = content.views;
             const formCountValue = content.form_count;
 
-            document.getElementById('quotaForms').textContent = `${formCountValue || 'N/A'} / ${FREE_PLAN_FORMS_LIMIT}`;
-            document.getElementById('quotaSpace').textContent = uploadsValue ? formatBytes(parseInt(uploadsValue)) : 'N/A';
-            document.getElementById('quotaSubmissions').textContent = `${totalSubmissionsValue || 'N/A'} / ${FREE_PLAN_SUBMISSIONS_LIMIT}`;
-            document.getElementById('quotaFormViews').textContent = `${viewsValue || 'N/A'} / ${FREE_PLAN_FORM_VIEWS_LIMIT}`;
+
+            document.getElementById('quotaForms').textContent = `${formCountValue || 'N/D'} / ${FREE_PLAN_FORMS_LIMIT}`;
+            document.getElementById('quotaSpace').textContent = uploadsValue ? formatBytes(parseInt(uploadsValue)) : 'N/D';
+            document.getElementById('quotaSubmissions').textContent = `${totalSubmissionsValue || 'N/D'} / ${FREE_PLAN_SUBMISSIONS_LIMIT}`;
+            document.getElementById('quotaFormViews').textContent = `${viewsValue || 'N/D'} / ${FREE_PLAN_FORM_VIEWS_LIMIT}`;
         }
 
 
         // Helper function to format bytes to human-readable size
         function formatBytes(bytes, decimals = 2) {
-            if (!bytes || isNaN(bytes)) return 'N/A';
+            if (!bytes || isNaN(bytes)) return 'N/D'; // Handle non-numeric bytes or NaN explicitly
             const k = 1024;
             const dm = decimals < 0 ? 0 : decimals;
             const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
@@ -360,17 +378,17 @@
                 return;
             }
 
-            logMessage('Retrieving forms...');
+            logMessage('Recupero dei moduli in corso...');
             try {
                 // Add counts=true to get submission counts
                 const response = await fetch(`${BASE_URL}/user/forms?apiKey=${apiKey}&counts=true`);
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    throw new Error(`Errore HTTP! Stato: ${response.status}`);
                 }
                 const data = await response.json();
 
                 if (!data.content) {
-                    logMessage('Unexpected response structure.');
+                    logMessage('Struttura di risposta inaspettata durante il recupero dei moduli.');
                     return;
                 }
 
@@ -381,15 +399,15 @@
 
                 // Process each form
                 for (let [index, form] of forms.entries()) {
-                    const formTitle = form.title || 'Untitled Form';
-                    const formId = form.id || 'N/A';
-                    const formStatus = form.status || 'ENABLED';
+                    const formTitle = form.title || 'Senza Titolo';
+                    const formId = form.id || 'N/D';
+                    const formStatus = form.status || 'ATTIVATO';
                     const isActive = formStatus.toUpperCase() === 'ENABLED' || formStatus.toUpperCase() === 'ATTIVATO';
 
                     // Get submission count from form data
                     const submissionCount = form.count || 0;
 
-                    logMessage(`Form ${index + 1}/${forms.length}: '${formTitle}' (ID: ${formId}) has ${submissionCount} submissions`);
+                    logMessage(`Modulo ${index + 1}/${forms.length}: '${formTitle}' (ID: ${formId}) - ${submissionCount} invii`);
                     const lastSubmissionDate = await getLastSubmissionDate(formId, apiKey);
 
                     // Store form data
@@ -409,7 +427,7 @@
                 // Update the formDataMap with new data
                 formDataMap = newFormDataMap;
 
-                logMessage(`Retrieved ${forms.length} forms.`);
+                logMessage(`Recuperati ${forms.length} moduli.`);
 
                 // Apply the current sort after refreshing the table
                 if (currentSortColumn) {
@@ -419,7 +437,7 @@
                     updateSortArrows();
                 }
             } catch (error) {
-                logMessage(`Error retrieving forms: ${error.message}`);
+                logMessage(`Errore nel recupero dei moduli: ${error.message}`);
                 console.error(error);
             } finally {
                 resetProgressBarTimer();
@@ -435,20 +453,25 @@
 				const data = await response.json();
 
 				if (data.content && data.content.length > 0) {
-					const createdAt = data.content[0].created_at;
+					const createdAt = data.content[0].created_at; // e.g., '2024-12-03 01:23:09'
 
+					// Determine the UTC offset for Eastern Time (ET) at the date of submission
 					const [datePart, timePart] = createdAt.split(' ');
 					const [year, month, day] = datePart.split('-').map(Number);
 					const [hour, minute, second] = timePart.split(':').map(Number);
 
 					const submissionDate = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
 
+					// Determine if the date is in Daylight Saving Time
 					const isDST = isDaylightSavingTimeInET(submissionDate);
-					const etOffset = isDST ? -4 : -5;
+
+					// Adjust the time by adding the ET offset to UTC
+					const etOffset = isDST ? -4 : -5; // UTC offset for ET in hours
 					submissionDate.setUTCHours(submissionDate.getUTCHours() - etOffset);
 
+					// Format the date in Central European Time
 					const options = {
-						timeZone: 'Europe/Rome',
+						timeZone: 'Europe/Rome', // Central European Time zone
 						year: 'numeric', month: '2-digit', day: '2-digit',
 						hour: '2-digit', minute: '2-digit', second: '2-digit',
 					};
@@ -456,21 +479,26 @@
 
 					return formatter.format(submissionDate);
 				} else {
-					return 'N/A';
+					return 'N/D';
 				}
 			} catch (error) {
-				logMessage(`Error getting last submission date for form ${formId}: ${error.message}`);
-				return 'N/A';
+				logMessage(`Errore nel recuperare la data dell'ultimo invio per il modulo ${formId}: ${error.message}`);
+				return 'N/D';
 			}
 		}
 
 		// Helper function to determine if a date is in Daylight Saving Time in ET (same as before)
 		function isDaylightSavingTimeInET(date) {
 			const year = date.getUTCFullYear();
-			const dstStart = new Date(Date.UTC(year, 2, 8, 7));
+
+			// Second Sunday in March at 2:00 AM
+			const dstStart = new Date(Date.UTC(year, 2, 8, 7)); // March 8th at 2:00 AM ET
 			dstStart.setUTCDate(8 + (7 - dstStart.getUTCDay()) % 7);
-			const dstEnd = new Date(Date.UTC(year, 10, 1, 6));
+
+			// First Sunday in November at 2:00 AM
+			const dstEnd = new Date(Date.UTC(year, 10, 1, 6)); // November 1st at 2:00 AM ET
 			dstEnd.setUTCDate(1 + (7 - dstEnd.getUTCDay()) % 7);
+
 			return date >= dstStart && date < dstEnd;
 		}
 
@@ -479,42 +507,59 @@
         function updateTable(newFormDataMap) {
             const tbody = document.querySelector('#formsTable tbody');
             const existingRows = tbody.querySelectorAll('tr');
+
+            // Map existing rows by formId for quick lookup
             const existingRowsMap = new Map();
             existingRows.forEach(row => {
                 const formId = row.getAttribute('data-form-id');
                 existingRowsMap.set(formId, row);
             });
+
+            // Keep track of rows that have been updated or added
             const processedFormIds = new Set();
 
             newFormDataMap.forEach((formData, formId) => {
                 const existingRow = existingRowsMap.get(formId);
                 if (existingRow) {
+                    // Update existing row if data has changed
                     const cells = existingRow.children;
+
                     const submissionCountCell = cells[4];
                     const lastSubmissionCell = cells[5];
+
                     const prevSubmissionCount = submissionCountCell.innerText;
                     const prevLastSubmission = lastSubmissionCell.innerText;
 
                     if (prevSubmissionCount != formData.submissionCount || prevLastSubmission != formData.lastSubmissionDate) {
                         submissionCountCell.innerText = formData.submissionCount;
                         lastSubmissionCell.innerText = formData.lastSubmissionDate;
+
+                        // Highlight updated row
                         existingRow.classList.add('row-updated');
                         setTimeout(() => {
                             existingRow.classList.remove('row-updated');
                         }, 1000);
                     }
+
+                    // Update checkbox state
                     const checkbox = existingRow.querySelector('.form-select-checkbox');
+                    // Modified line: Disable checkbox if submissionCount is 0
                     checkbox.disabled = formData.submissionCount === 0;
+
+                    // Update status badge
                     const statusCell = cells[3];
                     statusCell.innerHTML = formData.isActive ? '<span class="badge bg-success">Attivato</span>' : '<span class="badge bg-secondary">Disattivato</span>';
 
+                    // Update row class for inactive forms
                     if (!formData.isActive) {
                         existingRow.classList.add('table-secondary');
                     } else {
                         existingRow.classList.remove('table-secondary');
                     }
+
                     processedFormIds.add(formId);
                 } else {
+                    // Add new row
                     const row = document.createElement('tr');
                     row.setAttribute('data-form-id', formId);
                     row.innerHTML = `
@@ -531,6 +576,8 @@
                         row.classList.add('table-secondary');
                     }
                     tbody.appendChild(row);
+
+                    // Add event listener to update selectedFormIds when the checkbox is changed
                     const checkbox = row.querySelector('.form-select-checkbox');
                     if (checkbox) {
                         checkbox.addEventListener('change', function() {
@@ -542,14 +589,18 @@
                             }
                         });
                     }
+
+                    // Highlight new row
                     row.classList.add('row-updated');
                     setTimeout(() => {
                         row.classList.remove('row-updated');
                     }, 1000);
+
                     processedFormIds.add(formId);
                 }
             });
 
+            // Remove rows that are no longer present
             existingRows.forEach(row => {
                 const formId = row.getAttribute('data-form-id');
                 if (!newFormDataMap.has(formId)) {
@@ -559,59 +610,64 @@
             });
         }
 
-        // Function to delete selected submissions
+        // Function to delete selected submissions (same as before)
         async function deleteSelectedSubmissions() {
             const apiKey = document.getElementById('apiKey').value.trim();
             if (!apiKey) {
-                alert('Please enter your JotForm API Key.');
+                alert('Per favore inserisci la tua Chiave API JotForm.');
                 return;
             }
 
             const checkboxes = document.querySelectorAll('.form-select-checkbox:checked');
             if (checkboxes.length === 0) {
-                alert('Please select at least one form with submissions to delete.');
+                alert('Per favore seleziona almeno un modulo con invii per eliminare gli invii.');
                 return;
             }
 
-            if (!confirm(`Are you sure you want to delete submissions for ${checkboxes.length} form(s)? This action is irreversible and will ONLY delete submissions, NOT the forms.`)) {
+            if (!confirm(`Sei sicuro di voler eliminare gli invii per ${checkboxes.length} modulo/i? Questa azione non può essere annullata.`)) {
                 return;
             }
 
-            logMessage(`Deletion process started for ${checkboxes.length} forms.`); // Confirmation in log
+            logMessage(`Eliminazione degli invii avviata per ${checkboxes.length} moduli.`); // Log start of deletion process
 
             for (let checkbox of checkboxes) {
                 const formId = checkbox.getAttribute('data-form-id');
                 const formTitle = checkbox.closest('tr').children[1].innerText;
-                logMessage(`Deleting submissions for form: ${formTitle} (ID: ${formId})`);
+                logMessage(`Eliminazione invii per modulo: '${formTitle}' (ID: ${formId})`);
                 await deleteAllSubmissions(formId, apiKey);
+                // Update the table row
                 const row = checkbox.closest('tr');
                 row.children[4].innerText = '0';
-                row.children[5].innerText = 'N/A';
+                row.children[5].innerText = 'N/D';
                 checkbox.checked = false;
-                checkbox.disabled = true;
-                selectedFormIds.delete(formId);
+                checkbox.disabled = true; // Disable checkbox after deleting submissions
+                selectedFormIds.delete(formId); // Update the selected forms
 
+                // Update formDataMap
                 if (formDataMap.has(formId)) {
                     const formData = formDataMap.get(formId);
                     formData.submissionCount = 0;
-                    formData.lastSubmissionDate = 'N/A';
+                    formData.lastSubmissionDate = 'N/D';
                 }
             }
 
-            alert('Deletion process completed. Check the log for details. Note: Only submissions were deleted, forms remain.'); // Clear confirmation alert
-            logMessage('Deletion process completed. Only submissions were deleted.'); // Log completion
+            logMessage('Processo di eliminazione invii completato.'); // Log completion
+            alert('Processo di eliminazione completato. Controlla il registro per i dettagli.');
+
+            // Refresh quota dashboard after deletion
+            fetchAndDisplayQuota();
         }
 
         // Function to delete all submissions for a form (same as before)
         async function deleteAllSubmissions(formId, apiKey) {
             try {
                 let page = 1;
-                const limit = 100;
+                const limit = 100; // Adjust as needed
                 let hasMore = true;
 
                 while (hasMore) {
                     const response = await fetch(`${BASE_URL}/form/${formId}/submissions?apiKey=${apiKey}&limit=${limit}&page=${page}`);
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    if (!response.ok) throw new Error(`Errore HTTP! Stato: ${response.status}`);
                     const data = await response.json();
 
                     if (data.content && data.content.length > 0) {
@@ -621,11 +677,12 @@
                                 method: 'DELETE'
                             });
                             if (deleteResponse.ok) {
-                                logMessage(`Deleted submission ID: ${submissionId}`);
+                                logMessage(`Invio ID: ${submissionId} eliminato.`);
                             } else {
-                                logMessage(`Failed to delete submission ID: ${submissionId}. Status: ${deleteResponse.status}`);
+                                logMessage(`Impossibile eliminare invio ID: ${submissionId}. Stato: ${deleteResponse.status}`);
                             }
                         }
+                        // Check if there are more submissions
                         hasMore = data.currentPage < data.totalPages;
                         page++;
                     } else {
@@ -633,9 +690,9 @@
                     }
                 }
 
-                logMessage(`All submissions for form ID ${formId} have been deleted.`);
+                logMessage(`Tutti gli invii per il modulo ID ${formId} sono stati eliminati.`);
             } catch (error) {
-                logMessage(`Error deleting submissions for form ID ${formId}: ${error.message}`);
+                logMessage(`Errore nell'eliminare gli invii per il modulo ID ${formId}: ${error.message}`);
                 console.error(error);
             }
         }
@@ -645,8 +702,10 @@
             if (!column) return;
 
             if (currentSortColumn === column) {
+                // Toggle sort order if the same column is clicked
                 currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
             } else {
+                // Set to ascending order if a new column is clicked
                 currentSortOrder = 'asc';
                 currentSortColumn = column;
             }
@@ -663,7 +722,7 @@
 
         // Apply the current sort after refreshing the table (same as before)
         function applyCurrentSort() {
-            if (!currentSortColumn) return;
+            if (!currentSortColumn) return; // No sort to apply
 
             const tbody = document.querySelector('#formsTable tbody');
             const rows = Array.from(tbody.querySelectorAll('tr'));
@@ -672,6 +731,7 @@
                 let aText = a.querySelector(`td:nth-child(${getColumnIndex(currentSortColumn)})`).innerText.trim();
                 let bText = b.querySelector(`td:nth-child(${getColumnIndex(currentSortColumn)})`).innerText.trim();
 
+                // Handle numeric and date sorting
                 if (currentSortColumn === 'submissions') {
                     aText = parseInt(aText) || 0;
                     bText = parseInt(bText) || 0;
@@ -688,11 +748,13 @@
                 return 0;
             });
 
+            // Re-append sorted rows
             rows.forEach(row => tbody.appendChild(row));
         }
 
         // Function to update the sort arrows in the table headers (same as before)
         function updateSortArrows() {
+            // Remove existing arrows
             document.querySelectorAll('#formsTable th').forEach(header => {
                 const sortArrow = header.querySelector('.sort-arrow');
                 if (sortArrow) {
@@ -700,6 +762,7 @@
                 }
             });
 
+            // Add arrow to the currently sorted column
             if (currentSortColumn) {
                 const header = document.querySelector(`#formsTable th[data-column="${currentSortColumn}"]`);
                 const sortArrow = header.querySelector('.sort-arrow');
@@ -711,22 +774,23 @@
 
         // Password Authentication Logic (same as before)
         document.getElementById('authForm').addEventListener('submit', async function(event) {
-            event.preventDefault();
+            event.preventDefault(); // Prevent form submission
 
             const userPassword = document.getElementById('userPassword').value.trim();
             const authError = document.getElementById('authError');
-            authError.style.display = 'none';
+            authError.style.display = 'none'; // Hide previous error
 
             if (!userPassword) {
-                authError.textContent = 'Please enter a valid password.';
+                authError.textContent = 'Per favore inserisci una password valida.';
                 authError.style.display = 'block';
                 return;
             }
 
             try {
+                // Fetch the whitelist.txt file
                 const response = await fetch('whitelist.txt');
                 if (!response.ok) {
-                    throw new Error(`Could not retrieve whitelist. Status: ${response.status}`);
+                    throw new Error(`Impossibile recuperare la whitelist. Stato: ${response.status}`);
                 }
 
                 const whitelistData = await response.text();
@@ -742,29 +806,33 @@
                 const userEntry = userEntries.find(entry => entry.password === userPassword);
 
                 if (userEntry) {
+                    // Authentication successful
                     authModalInstance.hide();
                     document.getElementById('mainApp').style.display = 'block';
-                    logMessage(`User authenticated successfully.`);
+                    logMessage(`Utente autenticato con successo.`);
 
-                    const loadDefaultApiKey = confirm("Load default API key?");
+                    const loadDefaultApiKey = confirm("Vuoi caricare la API key salvata in memoria per la tua utenza?");
                     if (loadDefaultApiKey) {
                         document.getElementById('apiKey').value = userEntry.apiKey;
-                        logMessage('Default API key loaded.');
+                        logMessage('API key predefinita caricata.');
                     } else {
-                        logMessage('Please enter your custom API key.');
+                        logMessage('Inserisci la tua API key personalizzata.');
                     }
 
+                    // Retrieve forms after authentication
                     retrieveForms();
+                    // Fetch and display quota after authentication
                     fetchAndDisplayQuota();
                 } else {
-                    authError.textContent = 'Unauthorized password.';
+                    // Show error message
+                    authError.textContent = 'Password non autorizzata.';
                     authError.style.display = 'block';
-                    logMessage(`Unauthorized access attempt.`);
+                    logMessage(`Tentativo di accesso non autorizzato.`);
                 }
             } catch (error) {
-                authError.textContent = `Authentication error: ${error.message}`;
+                authError.textContent = `Errore durante l'autenticazione: ${error.message}`;
                 authError.style.display = 'block';
-                logMessage(`Authentication error: ${error.message}`);
+                logMessage(`Errore durante l'autenticazione: ${error.message}`);
                 console.error(error);
             }
         });
@@ -790,7 +858,7 @@
             const percent = ((refreshInterval - timeLeft) / refreshInterval) * 100;
             progressBar.style.width = percent + '%';
             progressBar.setAttribute('aria-valuenow', refreshInterval - timeLeft);
-            countdown.innerText = `${timeLeft} seconds`;
+            countdown.innerText = `${timeLeft} secondi`;
         }
 
         // Function to start the progress bar timer
@@ -802,7 +870,7 @@
                 timeLeft--;
                 if (timeLeft <= 0) {
                     retrieveForms();
-                    fetchAndDisplayQuota();
+                    fetchAndDisplayQuota(); // Refresh quota as well
                     timeLeft = refreshInterval;
                 }
                 updateProgressBar();
