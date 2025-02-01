@@ -315,7 +315,7 @@
                 logMessage('Raw Quota API Response: ' + JSON.stringify(quotaData)); // Log raw response in logBox
 
                 if (quotaData && quotaData.content) {
-                    updateQuotaDashboard(quotaData.content);
+                    updateQuotaDashboard(quotaData); // Pass the entire quotaData object
                     logMessage('Quota dashboard updated successfully.'); // Log success
                 } else {
                     const message = 'Unexpected response structure when fetching quota data.';
@@ -332,6 +332,22 @@
 
         // Function to update the quota dashboard with data
         function updateQuotaDashboard(quota) {
+            logMessage("Full Quota Object received by updateQuotaDashboard: " + JSON.stringify(quota)); // Log the entire quota object right here
+
+            if (!quota || !quota.content) { // Check if quota or quota.content is valid
+                logMessage("Quota object or quota.content is invalid/empty.");
+                document.getElementById('quotaForms').textContent = 'N/A';
+                document.getElementById('quotaSpace').textContent = 'N/A';
+                document.getElementById('quotaSubmissionsUsed').textContent = 'N/A';
+                document.getElementById('quotaSubmissionsAvailable').textContent = 'N/A';
+                document.getElementById('quotaFormViews').textContent = 'N/A';
+                document.getElementById('quotaPaymentSubmissions').textContent = 'N/A';
+                document.getElementById('quotaSSLSubmissions').textContent = 'N/A';
+                document.getElementById('quotaReports').textContent = 'N/A';
+                return; // Exit the function if quota data is invalid
+            }
+
+
             const content = quota.content || {}; // Safely access content, default to empty object
             logMessage("Quota Content: " + JSON.stringify(content)); // Log the content object itself
 
