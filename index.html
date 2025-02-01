@@ -148,28 +148,19 @@
         <div id="quotaDashboard">
             <h6>Quota Utilizzo</h6>
             <div class="quota-item">
-                <p><span class="quota-label">Moduli:</span> <span id="quotaForms" class="quota-value">N/A</span></p>
+                <p><span class="quota-label">Moduli Usati:</span> <span id="quotaFormsUsed" class="quota-value">N/A</span></p>
             </div>
             <div class="quota-item">
                 <p><span class="quota-label">Spazio Utilizzato:</span> <span id="quotaSpace" class="quota-value">Caricamento...</span></p>
             </div>
             <div class="quota-item">
-                <p><span class="quota-label">Invii Moduli (Usati):</span> <span id="quotaSubmissionsUsed" class="quota-value">Caricamento...</span></p>
+                <p><span class="quota-label">Invii Mensili Disponibili:</span> <span id="quotaSubmissionsAvailable" class="quota-value">Caricamento...</span></p>
             </div>
              <div class="quota-item">
-                <p><span class="quota-label">Invii Moduli (Disponibili):</span> <span id="quotaSubmissionsAvailable" class="quota-value">Caricamento...</span></p>
+                <p><span class="quota-label">Invii Totali Usati:</span> <span id="quotaTotalSubmissionsUsed" class="quota-value">Caricamento...</span></p>
             </div>
             <div class="quota-item">
-                <p><span class="quota-label">Visualizzazioni Moduli (Usate):</span> <span id="quotaFormViews" class="quota-value">Caricamento...</span></p>
-            </div>
-            <div class="quota-item">
-                <p><span class="quota-label">Invii Pagamento:</span> <span id="quotaPaymentSubmissions" class="quota-value">N/A</span></p>
-            </div>
-            <div class="quota-item">
-                <p><span class="quota-label">SSL Submissions:</span> <span id="quotaSSLSubmissions" class="quota-value">N/A</span></p>
-            </div>
-            <div class="quota-item">
-                <p><span class="quota-label">Reports:</span> <span id="quotaReports" class="quota-value">N/A</span></p>
+                <p><span class="quota-label">Visualizzazioni Moduli Usate:</span> <span id="quotaFormViewsUsed" class="quota-value">Caricamento...</span></p>
             </div>
         </div>
 
@@ -301,81 +292,49 @@
                 return; // Or handle appropriately, maybe clear quota display?
             }
 
-            logMessage('Fetching quota data...'); // Log start
+            logMessage('Fetching quota data...');
 
             try {
                 const response = await fetch(`${BASE_URL}/user/usage?apiKey=${apiKey}`);
                 if (!response.ok) {
                     const message = `Failed to fetch quota. HTTP status: ${response.status}`;
-                    logMessage(message); // Log HTTP error in logBox
+                    logMessage(message);
                     throw new Error(message);
                 }
                 const quotaData = await response.json();
 
-                logMessage('Raw Quota API Response: ' + JSON.stringify(quotaData)); // Log raw response in logBox
+                logMessage('Raw Quota API Response: ' + JSON.stringify(quotaData));
 
                 if (quotaData && quotaData.content) {
-                    updateQuotaDashboard(quotaData); // Pass the entire quotaData object
-                    logMessage('Quota dashboard updated successfully.'); // Log success
+                    updateQuotaDashboard(quotaData.content);
+                    logMessage('Quota dashboard updated successfully.');
                 } else {
                     const message = 'Unexpected response structure when fetching quota data.';
-                    logMessage(message); // Log unexpected structure in logBox
+                    logMessage(message);
                     logMessage('Quota data might not be displayed correctly.');
                 }
             } catch (error) {
-                logMessage(`Error fetching quota data: ${error.message}`); // Log error message in logBox
-                console.error('Error fetching quota:', error); // Keep console.error for developer debugging
-                // Optionally update dashboard to show error or "N/A" - already handled in updateQuotaDashboard
-                updateQuotaDashboard({}); // Pass empty object to display defaults as N/A
+                logMessage(`Error fetching quota data: ${error.message}`);
+                console.error('Error fetching quota:', error);
+                updateQuotaDashboard({});
             }
         }
 
         // Function to update the quota dashboard with data
-        function updateQuotaDashboard(quota) {
-            logMessage("Full Quota Object received by updateQuotaDashboard: " + JSON.stringify(quota)); // Log the entire quota object right here
+        function updateQuotaDashboard(content) {
+            content = content || {}; // Ensure content is an object
 
-            if (!quota || !quota.content) { // Check if quota or quota.content is valid
-                logMessage("Quota object or quota.content is invalid/empty.");
-                document.getElementById('quotaForms').textContent = 'N/A';
-                document.getElementById('quotaSpace').textContent = 'N/A';
-                document.getElementById('quotaSubmissionsUsed').textContent = 'N/A';
-                document.getElementById('quotaSubmissionsAvailable').textContent = 'N/A';
-                document.getElementById('quotaFormViews').textContent = 'N/A';
-                document.getElementById('quotaPaymentSubmissions').textContent = 'N/A';
-                document.getElementById('quotaSSLSubmissions').textContent = 'N/A';
-                document.getElementById('quotaReports').textContent = 'N/A';
-                return; // Exit the function if quota data is invalid
-            }
-
-
-            const content = quota.content || {}; // Safely access content, default to empty object
-            logMessage("Quota Content: " + JSON.stringify(content)); // Log the content object itself
-
-            const uploadsValue = content.uploads;
-            const totalSubmissionsValue = content.total_submissions;
-            const submissionsValue = content.submissions;
-            const viewsValue = content.views;
-
-            logMessage(`uploadsValue: ${uploadsValue}, type: ${typeof uploadsValue}`);
-            logMessage(`totalSubmissionsValue: ${totalSubmissionsValue}, type: ${typeof totalSubmissionsValue}`);
-            logMessage(`submissionsValue: ${submissionsValue}, type: ${typeof submissionsValue}`);
-            logMessage(`viewsValue: ${viewsValue}, type: ${typeof viewsValue}`);
-
-
-            document.getElementById('quotaForms').textContent = 'N/A'; // Forms quota not in this response
-            document.getElementById('quotaSpace').textContent = uploadsValue ? formatBytes(parseInt(uploadsValue)) : 'N/A';
-            document.getElementById('quotaSubmissionsUsed').textContent = totalSubmissionsValue !== undefined ? totalSubmissionsValue : 'N/A';
-            document.getElementById('quotaSubmissionsAvailable').textContent = submissionsValue !== undefined ? submissionsValue : 'N/A';
-            document.getElementById('quotaFormViews').textContent = viewsValue !== undefined ? viewsValue : 'N/A';
-            document.getElementById('quotaPaymentSubmissions').textContent = 'N/A'; // Payment Submissions unclear from response
-            document.getElementById('quotaSSLSubmissions').textContent = 'N/A'; // SSL Submissions unclear from response
-            document.getElementById('quotaReports').textContent = 'N/A'; // Reports quota not in this response
+            document.getElementById('quotaFormsUsed').textContent = content.form_count !== undefined ? content.form_count : 'N/A';
+            document.getElementById('quotaSpace').textContent = content.uploads ? formatBytes(parseInt(content.uploads)) : 'N/A';
+            document.getElementById('quotaSubmissionsAvailable').textContent = content.submissions !== undefined ? content.submissions : 'N/A';
+            document.getElementById('quotaTotalSubmissionsUsed').textContent = content.total_submissions !== undefined ? content.total_submissions : 'N/A';
+            document.getElementById('quotaFormViewsUsed').textContent = content.views !== undefined ? content.views : 'N/A';
         }
 
 
         // Helper function to format bytes to human-readable size
         function formatBytes(bytes, decimals = 2) {
-            if (!bytes || isNaN(bytes)) return 'N/A'; // Handle non-numeric bytes or NaN explicitly
+            if (!bytes || isNaN(bytes)) return 'N/A';
             const k = 1024;
             const dm = decimals < 0 ? 0 : decimals;
             const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
@@ -384,7 +343,7 @@
         }
 
 
-        // Function to retrieve all forms (same as before)
+        // Function to retrieve all forms (rest is the same as before, only quota dashboard functions are changed)
         async function retrieveForms() {
             const apiKey = document.getElementById('apiKey').value.trim();
             if (!apiKey) {
@@ -459,7 +418,7 @@
         }
 
 
-        // Function to get last submission date for a form (same as before)
+        // Function to get last submission date for a form (rest is the same)
 		async function getLastSubmissionDate(formId, apiKey) {
 			try {
 				const response = await fetch(`${BASE_URL}/form/${formId}/submissions?apiKey=${apiKey}&limit=1&orderby=created_at&sort=desc`);
@@ -501,7 +460,7 @@
 			}
 		}
 
-		// Helper function to determine if a date is in Daylight Saving Time in ET (same as before)
+		// Helper function to determine if a date is in Daylight Saving Time in ET (rest is the same)
 		function isDaylightSavingTimeInET(date) {
 			const year = date.getUTCFullYear();
 
@@ -517,7 +476,7 @@
 		}
 
 
-        // Function to update the table with new form data (same as before)
+        // Function to update the table with new form data (rest is the same)
         function updateTable(newFormDataMap) {
             const tbody = document.querySelector('#formsTable tbody');
             const existingRows = tbody.querySelectorAll('tr');
@@ -624,7 +583,7 @@
             });
         }
 
-        // Function to delete selected submissions (same as before)
+        // Function to delete selected submissions (rest is the same)
         async function deleteSelectedSubmissions() {
             const apiKey = document.getElementById('apiKey').value.trim();
             if (!apiKey) {
@@ -667,7 +626,7 @@
             logMessage('Processo di eliminazione completato.');
         }
 
-        // Function to delete all submissions for a form (same as before)
+        // Function to delete all submissions for a form (rest is the same)
         async function deleteAllSubmissions(formId, apiKey) {
             try {
                 let page = 1;
@@ -706,7 +665,7 @@
             }
         }
 
-        // Function to sort the table based on a column (same as before)
+        // Function to sort the table based on a column (rest is the same)
         function sortTable(column) {
             if (!column) return;
 
@@ -723,13 +682,13 @@
             updateSortArrows();
         }
 
-        // Helper function to get column index based on column name (same as before)
+        // Helper function to get column index based on column name (rest is the same)
         function getColumnIndex(column) {
             const columns = ['select', 'title', 'id', 'status', 'submissions', 'lastSubmission'];
             return columns.indexOf(column) + 1;
         }
 
-        // Apply the current sort after refreshing the table (same as before)
+        // Apply the current sort after refreshing the table (rest is the same)
         function applyCurrentSort() {
             if (!currentSortColumn) return; // No sort to apply
 
@@ -761,7 +720,7 @@
             rows.forEach(row => tbody.appendChild(row));
         }
 
-        // Function to update the sort arrows in the table headers (same as before)
+        // Function to update the sort arrows in the table headers (rest is the same)
         function updateSortArrows() {
             // Remove existing arrows
             document.querySelectorAll('#formsTable th').forEach(header => {
@@ -781,7 +740,7 @@
             }
         }
 
-        // Password Authentication Logic (same as before)
+        // Password Authentication Logic (rest is the same)
         document.getElementById('authForm').addEventListener('submit', async function(event) {
             event.preventDefault(); // Prevent form submission
 
@@ -846,7 +805,7 @@
             }
         });
 
-        // Display the authentication modal on page load (same as before)
+        // Display the authentication modal on page load (rest is the same)
         document.addEventListener('DOMContentLoaded', function() {
             authModalInstance = new bootstrap.Modal(document.getElementById('authModal'), {
                 backdrop: 'static',
@@ -858,7 +817,7 @@
             startProgressBarTimer();
         });
 
-        // Progress Bar Functions (same as before)
+        // Progress Bar Functions (rest is the same)
 
         // Function to update the progress bar
         function updateProgressBar() {
