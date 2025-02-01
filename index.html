@@ -148,25 +148,28 @@
         <div id="quotaDashboard">
             <h6>Quota Utilizzo</h6>
             <div class="quota-item">
-                <p><span class="quota-label">Moduli:</span> <span id="quotaForms" class="quota-value">Caricamento...</span></p>
+                <p><span class="quota-label">Moduli:</span> <span id="quotaForms" class="quota-value">N/A</span></p>
             </div>
             <div class="quota-item">
                 <p><span class="quota-label">Spazio Utilizzato:</span> <span id="quotaSpace" class="quota-value">Caricamento...</span></p>
             </div>
             <div class="quota-item">
-                <p><span class="quota-label">Invii Moduli:</span> <span id="quotaSubmissions" class="quota-value">Caricamento...</span></p>
+                <p><span class="quota-label">Invii Moduli (Usati):</span> <span id="quotaSubmissionsUsed" class="quota-value">Caricamento...</span></p>
+            </div>
+             <div class="quota-item">
+                <p><span class="quota-label">Invii Moduli (Disponibili):</span> <span id="quotaSubmissionsAvailable" class="quota-value">Caricamento...</span></p>
             </div>
             <div class="quota-item">
-                <p><span class="quota-label">Visualizzazioni Moduli:</span> <span id="quotaFormViews" class="quota-value">Caricamento...</span></p>
+                <p><span class="quota-label">Visualizzazioni Moduli (Usate):</span> <span id="quotaFormViews" class="quota-value">Caricamento...</span></p>
             </div>
             <div class="quota-item">
-                <p><span class="quota-label">Invii Pagamento:</span> <span id="quotaPaymentSubmissions" class="quota-value">Caricamento...</span></p>
+                <p><span class="quota-label">Invii Pagamento:</span> <span id="quotaPaymentSubmissions" class="quota-value">N/A</span></p>
             </div>
             <div class="quota-item">
-                <p><span class="quota-label">SSL Submissions:</span> <span id="quotaSSLSubmissions" class="quota-value">Caricamento...</span></p>
+                <p><span class="quota-label">SSL Submissions:</span> <span id="quotaSSLSubmissions" class="quota-value">N/A</span></p>
             </div>
             <div class="quota-item">
-                <p><span class="quota-label">Reports:</span> <span id="quotaReports" class="quota-value">Caricamento...</span></p>
+                <p><span class="quota-label">Reports:</span> <span id="quotaReports" class="quota-value">N/A</span></p>
             </div>
         </div>
 
@@ -323,32 +326,28 @@
                 logMessage(`Error fetching quota data: ${error.message}`); // Log error message in logBox
                 console.error('Error fetching quota:', error); // Keep console.error for developer debugging
                 // Optionally update dashboard to show error or "N/A" - already handled in updateQuotaDashboard
-                updateQuotaDashboard({
-                    forms: { available: 'N/A' },
-                    space: { available: 'N/A' },
-                    submissions: { available: 'N/A' },
-                    formViews: { available: 'N/A' },
-                    paymentSubmissions: { available: 'N/A' },
-                    sslSubmissions: { available: 'N/A' },
-                    reports: { available: 'N/A' }
-                });
+                updateQuotaDashboard({}); // Pass empty object to display defaults as N/A
             }
         }
 
         // Function to update the quota dashboard with data
         function updateQuotaDashboard(quota) {
-            document.getElementById('quotaForms').textContent = quota.forms ? `${quota.forms.used} / ${quota.forms.available}` : 'N/A';
-            document.getElementById('quotaSpace').textContent = quota.space ? formatBytes(quota.space.used) + ' / ' + formatBytes(quota.space.available) : 'N/A';
-            document.getElementById('quotaSubmissions').textContent = quota.submissions ? `${quota.submissions.used} / ${quota.submissions.available}` : 'N/A';
-            document.getElementById('quotaFormViews').textContent = quota.formViews ? `${quota.formViews.used} / ${quota.formViews.available}` : 'N/A';
-            document.getElementById('quotaPaymentSubmissions').textContent = quota.paymentSubmissions ? `${quota.paymentSubmissions.used} / ${quota.paymentSubmissions.available}` : 'N/A';
-            document.getElementById('quotaSSLSubmissions').textContent = quota.sslSubmissions ? `${quota.sslSubmissions.used} / ${quota.sslSubmissions.available}` : 'N/A';
-            document.getElementById('quotaReports').textContent = quota.reports ? `${quota.reports.used} / ${quota.reports.available}` : 'N/A';
+            const content = quota.content || {}; // Safely access content, default to empty object
+
+            document.getElementById('quotaForms').textContent = 'N/A'; // Forms quota not in this response
+            document.getElementById('quotaSpace').textContent = content.uploads ? formatBytes(parseInt(content.uploads)) : 'N/A';
+            document.getElementById('quotaSubmissionsUsed').textContent = content.total_submissions !== undefined ? content.total_submissions : 'N/A';
+            document.getElementById('quotaSubmissionsAvailable').textContent = content.submissions !== undefined ? content.submissions : 'N/A';
+            document.getElementById('quotaFormViews').textContent = content.views !== undefined ? content.views : 'N/A';
+            document.getElementById('quotaPaymentSubmissions').textContent = 'N/A'; // Payment Submissions unclear from response
+            document.getElementById('quotaSSLSubmissions').textContent = 'N/A'; // SSL Submissions unclear from response
+            document.getElementById('quotaReports').textContent = 'N/A'; // Reports quota not in this response
         }
+
 
         // Helper function to format bytes to human-readable size
         function formatBytes(bytes, decimals = 2) {
-            if (!bytes || bytes === 'N/A') return bytes;
+            if (!bytes || isNaN(bytes)) return 'N/A'; // Handle non-numeric bytes or undefined
             const k = 1024;
             const dm = decimals < 0 ? 0 : decimals;
             const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
